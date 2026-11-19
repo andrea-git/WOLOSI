@@ -84,6 +84,7 @@
       const payload = await response.json();
       validateStore(payload.data);
       state.store = payload.data;
+      ensureOverridesStore();
       saveLocalStore();
       setSyncStatus('Cloud ✓', 'ok');
     } catch (error) {
@@ -128,13 +129,54 @@
     for (const exercise of day.exercises) {
       const fragment = els.template.content.cloneNode(true);
       const card = fragment.querySelector('.exercise-card');
-      const current = normalizeExerciseLog(session.exercises[exercise.id], exercise.sets);
-      const prev1 = normalizeExerciseLog(previous[0]?.exercises?.[exercise.id], exercise.sets);
-      const prev2 = normalizeExerciseLog(previous[1]?.exercises?.[exercise.id], exercise.sets);
+      const slotKey = exerciseSlotKey(day, exercise);
+      const override = getExerciseOverride(day, exercise);
+      const effectiveId = override.id || exercise.id;
+      const current = normalizeExerciseLog(session.exercises[effectiveId], exercise.sets);
+      const prev1 = normalizeExerciseLog(previous[0]?.exercises?.[effectiveId], exercise.sets);
+      const prev2 = normalizeExerciseLog(previous[1]?.exercises?.[effectiveId], exercise.sets);
 
       fragment.querySelector('.exercise-name').textContent = exercise.name;
       fragment.querySelector('.exercise-meta').textContent = `${exercise.sets} × ${exercise.reps}${exercise.failure ? ` ${exercise.failure}` : ''}${exercise.optional ? ' · opzionale' : ''}`;
       fragment.querySelector('.exercise-static-note').textContent = exercise.note || '';
+
+      const machineInput = fragment.querySelector('.machine-input');
+      machineInput.value = override.machine || '';
+      machineInput.addEventListener('input', () => {
+        setExerciseOverride(slotKey, { machine: machineInput.value });
+      });
+
+      const idInput = fragment.querySelector('.exercise-id-input');
+      idInput.value = effectiveId;
+      const originalIdValue = effectiveId;
+      const commitId = () => {
+        const nextId = sanitizeExerciseId(idInput.value);
+        if (!nextId) {
+          idInput.value = originalIdValue;
+          return;
+        }
+        if (nextId === originalIdValue) {
+          idInput.value = nextId;
+          return;
+        }
+        if (hasDuplicateEffectiveId(day, exercise, nextId)) {
+          alert(`ID già usato in ${day.id}: ${nextId}`);
+          idInput.value = originalIdValue;
+          return;
+        }
+        setExerciseOverride(slotKey, { id: nextId }, true);
+      };
+      idInput.addEventListener('blur', commitId);
+      idInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          idInput.blur();
+        }
+        if (event.key === 'Escape') {
+          idInput.value = originalIdValue;
+          idInput.blur();
+        }
+      });
       fragment.querySelector('.prev-date-1').textContent = shortDate(previous[0]?.date);
       fragment.querySelector('.prev-date-2').textContent = shortDate(previous[1]?.date);
 
@@ -146,8 +188,8 @@
       copyBtn.addEventListener('click', () => {
         if (!hasExerciseSeriesData(prev1)) return;
         const target = getOrCreateSession(day);
-        target.exercises[exercise.id] = {
-          ...normalizeExerciseLog(target.exercises[exercise.id], exercise.sets),
+        target.exercises[effectiveId] = {
+          ...normalizeExerciseLog(target.exercises[effectiveId], exercise.sets),
           loads: [...prev1.loads],
           reps: [...prev1.reps],
           rir: [...prev1.rir],
@@ -160,7 +202,7 @@
       const clearBtn = fragment.querySelector('.clear-today-btn');
       clearBtn.addEventListener('click', () => {
         const target = getOrCreateSession(day);
-        target.exercises[exercise.id] = emptyExerciseLog(exercise.sets);
+        target.exercises[effectiveId] = emptyExerciseLog(exercise.sets);
         target.updatedAt = Date.now();
         upsertSession(target);
         renderExercises();
@@ -197,41 +239,41 @@
 
         loadInput.addEventListener('input', () => {
           loadInput.value = sanitizeDecimal(loadInput.value);
-          updateSeriesField(day, exercise, i, 'loads', loadInput.value);
+          updateSeriesField(day, exercise, effectiveId, i, 'loads', loadInput.value);
         });
         repsInput.addEventListener('input', () => {
           repsInput.value = sanitizeInteger(repsInput.value, 3);
-          updateSeriesField(day, exercise, i, 'reps', repsInput.value);
+          updateSeriesField(day, exercise, effectiveId, i, 'reps', repsInput.value);
         });
         rirInput.addEventListener('input', () => {
           rirInput.value = sanitizeInteger(rirInput.value, 2);
-          updateSeriesField(day, exercise, i, 'rir', rirInput.value);
+          updateSeriesField(day, exercise, effectiveId, i, 'rir', rirInput.value);
         });
         tbody.appendChild(tr);
       }
 
       const notes = fragment.querySelector('.notes');
       notes.value = current.notes || '';
-      notes.addEventListener('input', () => updateNotes(day, exercise, notes.value));
+      notes.addEventListener('input', () => updateNotes(day, exercise, effectiveId, notes.value));
 
-      card.dataset.exerciseId = exercise.id;
+      card.dataset.exerciseId = effectiveId;
       els.exerciseList.appendChild(fragment);
     }
   }
 
-  function updateSeriesField(day, exercise, setIndex, field, value) {
+  function updateSeriesField(day, exercise, effectiveId, setIndex, field, value) {
     const session = getOrCreateSession(day);
-    const current = normalizeExerciseLog(session.exercises[exercise.id], exercise.sets);
+    const current = normalizeExerciseLog(session.exercises[effectiveId], exercise.sets);
     const values = ensureLength(current[field], exercise.sets);
     values[setIndex] = value;
-    session.exercises[exercise.id] = { ...current, [field]: values };
+    session.exercises[effectiveId] = { ...current, [field]: values };
     scheduleSave(session);
   }
 
-  function updateNotes(day, exercise, value) {
+  function updateNotes(day, exercise, effectiveId, value) {
     const session = getOrCreateSession(day);
-    const current = normalizeExerciseLog(session.exercises[exercise.id], exercise.sets);
-    session.exercises[exercise.id] = { ...current, notes: value };
+    const current = normalizeExerciseLog(session.exercises[effectiveId], exercise.sets);
+    session.exercises[effectiveId] = { ...current, notes: value };
     scheduleSave(session);
   }
 
@@ -256,7 +298,8 @@
     }
 
     for (const exercise of day.exercises) {
-      session.exercises[exercise.id] = normalizeExerciseLog(session.exercises[exercise.id], exercise.sets);
+      const effectiveId = getExerciseOverride(day, exercise).id || exercise.id;
+      session.exercises[effectiveId] = normalizeExerciseLog(session.exercises[effectiveId], exercise.sets);
     }
     return session;
   }
@@ -325,8 +368,57 @@
     return copy.slice(0, length);
   }
 
+  function ensureOverridesStore() {
+    if (!state.store.exerciseOverrides || typeof state.store.exerciseOverrides !== 'object') {
+      state.store.exerciseOverrides = {};
+    }
+    return state.store.exerciseOverrides;
+  }
+
+  function exerciseSlotKey(day, exercise) {
+    return `${day.id}:${exercise.id}`;
+  }
+
+  function getExerciseOverride(day, exercise) {
+    const overrides = ensureOverridesStore();
+    return overrides[exerciseSlotKey(day, exercise)] || {};
+  }
+
+  function setExerciseOverride(slotKey, patch, rerender = false) {
+    const overrides = ensureOverridesStore();
+    overrides[slotKey] = { ...(overrides[slotKey] || {}), ...patch };
+
+    if (patch.machine !== undefined && String(patch.machine).trim() === '') {
+      delete overrides[slotKey].machine;
+    }
+    if (patch.id !== undefined && String(patch.id).trim() === '') {
+      delete overrides[slotKey].id;
+    }
+    if (Object.keys(overrides[slotKey]).length === 0) delete overrides[slotKey];
+
+    saveStore();
+    if (rerender) renderExercises();
+  }
+
+  function hasDuplicateEffectiveId(day, currentExercise, candidateId) {
+    return day.exercises.some((exercise) => {
+      if (exercise === currentExercise) return false;
+      const effectiveId = getExerciseOverride(day, exercise).id || exercise.id;
+      return effectiveId === candidateId;
+    });
+  }
+
+  function sanitizeExerciseId(value) {
+    return String(value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9_-]/g, '')
+      .replace(/-+/g, '-');
+  }
+
   function emptyStore() {
-    return { version: 1, sessions: [] };
+    return { version: 1, sessions: [], exerciseOverrides: {} };
   }
 
   function validateStore(store) {
@@ -341,6 +433,7 @@
       if (!raw) return emptyStore();
       const parsed = JSON.parse(raw);
       validateStore(parsed);
+      if (!parsed.exerciseOverrides || typeof parsed.exerciseOverrides !== 'object') parsed.exerciseOverrides = {};
       return parsed;
     } catch {
       return emptyStore();
@@ -397,6 +490,7 @@
     if (payload?.data) {
       validateStore(payload.data);
       state.store = payload.data;
+      ensureOverridesStore();
       saveLocalStore();
     }
   }
@@ -456,6 +550,7 @@
       const parsed = JSON.parse(await file.text());
       validateStore(parsed);
       state.store = parsed;
+      ensureOverridesStore();
       saveLocalStore();
       setSyncStatus('Import…', 'working');
       await pushRemoteNow(parsed);
