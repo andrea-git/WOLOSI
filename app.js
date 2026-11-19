@@ -163,6 +163,7 @@
       const current = normalizeExerciseLog(session.exercises[effectiveId], exercise.sets);
       const prev1 = normalizeExerciseLog(previous[0]?.exercises?.[effectiveId], exercise.sets);
       const prev2 = normalizeExerciseLog(previous[1]?.exercises?.[effectiveId], exercise.sets);
+      const setCount = current.setCount;
 
       fragment.querySelector('.exercise-name').textContent = exercise.name;
       fragment.querySelector('.exercise-meta').textContent = `${exercise.sets} × ${exercise.reps}${exercise.failure ? ` ${exercise.failure}` : ''}${exercise.optional ? ' · opzionale' : ''}`;
@@ -193,6 +194,7 @@
         const target = getOrCreateSession(day);
         target.exercises[effectiveId] = {
           ...normalizeExerciseLog(target.exercises[effectiveId], exercise.sets),
+          setCount: prev1.setCount,
           loads: [...prev1.loads],
           reps: [...prev1.reps],
           rir: [...prev1.rir],
@@ -212,7 +214,7 @@
       });
 
       const tbody = fragment.querySelector('tbody');
-      for (let i = 0; i < exercise.sets; i += 1) {
+      for (let i = 0; i < setCount; i += 1) {
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>${i + 1}</td>
@@ -255,6 +257,48 @@
         tbody.appendChild(tr);
       }
 
+      const removeSetBtn = fragment.querySelector('.remove-set-btn');
+      const addSetBtn = fragment.querySelector('.add-set-btn');
+      removeSetBtn.disabled = setCount <= 1;
+
+      addSetBtn.addEventListener('click', () => {
+        const target = getOrCreateSession(day);
+        const log = normalizeExerciseLog(target.exercises[effectiveId], exercise.sets);
+        const nextCount = log.setCount + 1;
+        target.exercises[effectiveId] = {
+          ...log,
+          setCount: nextCount,
+          loads: ensureLength(log.loads, nextCount),
+          reps: ensureLength(log.reps, nextCount),
+          rir: ensureLength(log.rir, nextCount),
+        };
+        target.updatedAt = Date.now();
+        upsertSession(target);
+        renderExercises();
+      });
+
+      removeSetBtn.addEventListener('click', () => {
+        const target = getOrCreateSession(day);
+        const log = normalizeExerciseLog(target.exercises[effectiveId], exercise.sets);
+        if (log.setCount <= 1) return;
+
+        const last = log.setCount - 1;
+        const hasData = Boolean(log.loads[last] || log.reps[last] || log.rir[last]);
+        if (hasData && !confirm('L’ultima serie contiene dati. Rimuoverla?')) return;
+
+        const nextCount = log.setCount - 1;
+        target.exercises[effectiveId] = {
+          ...log,
+          setCount: nextCount,
+          loads: log.loads.slice(0, nextCount),
+          reps: log.reps.slice(0, nextCount),
+          rir: log.rir.slice(0, nextCount),
+        };
+        target.updatedAt = Date.now();
+        upsertSession(target);
+        renderExercises();
+      });
+
       const notes = fragment.querySelector('.notes');
       notes.value = current.notes || '';
       notes.addEventListener('input', () => updateNotes(day, exercise, effectiveId, notes.value));
@@ -267,7 +311,7 @@
   function updateSeriesField(day, exercise, effectiveId, setIndex, field, value) {
     const session = getOrCreateSession(day);
     const current = normalizeExerciseLog(session.exercises[effectiveId], exercise.sets);
-    const values = ensureLength(current[field], exercise.sets);
+    const values = ensureLength(current[field], current.setCount);
     values[setIndex] = value;
     session.exercises[effectiveId] = { ...current, [field]: values };
     scheduleSave(session);
@@ -346,21 +390,26 @@
   }
 
   function emptyExerciseLog(sets) {
+    const count = Math.max(1, Number(sets) || 1);
     return {
-      loads: Array.from({ length: sets }, () => ''),
-      reps: Array.from({ length: sets }, () => ''),
-      rir: Array.from({ length: sets }, () => ''),
+      setCount: count,
+      loads: Array.from({ length: count }, () => ''),
+      reps: Array.from({ length: count }, () => ''),
+      rir: Array.from({ length: count }, () => ''),
       notes: '',
     };
   }
 
   function normalizeExerciseLog(log, sets) {
-    const empty = emptyExerciseLog(sets);
-    if (!log) return empty;
+    const fallbackCount = Math.max(1, Number(sets) || 1);
+    if (!log) return emptyExerciseLog(fallbackCount);
+
+    const count = Math.max(1, Number(log.setCount || fallbackCount));
     return {
-      loads: ensureLength(log.loads || [], sets),
-      reps: ensureLength(log.reps || [], sets),
-      rir: ensureLength(log.rir || [], sets),
+      setCount: count,
+      loads: ensureLength(log.loads || [], count),
+      reps: ensureLength(log.reps || [], count),
+      rir: ensureLength(log.rir || [], count),
       notes: log.notes || '',
     };
   }
