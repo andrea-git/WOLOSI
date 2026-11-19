@@ -188,8 +188,23 @@
         if (!rendered) alert('Servono kg e ripetizioni validi sia oggi sia nella sessione precedente.');
       });
 
-      renderPerformanceIndicator(prev1Indicator, previousRaw1, previousRaw2);
-      renderPerformanceIndicator(prev2Indicator, previousRaw2, previousRaw3);
+      prev1Indicator.disabled = !previousRaw1 || !previousRaw2;
+      prev1Indicator.title = prev1Indicator.disabled
+        ? 'Nessuna sessione precedente confrontabile'
+        : `Valuta la prestazione del ${shortDate(previous[0]?.date)}`;
+      prev1Indicator.addEventListener('click', () => {
+        const rendered = renderPerformanceIndicator(prev1Indicator, previousRaw1, previousRaw2, true);
+        if (!rendered) alert('Servono kg e ripetizioni validi in entrambe le sessioni.');
+      });
+
+      prev2Indicator.disabled = !previousRaw2 || !previousRaw3;
+      prev2Indicator.title = prev2Indicator.disabled
+        ? 'Nessuna sessione precedente confrontabile'
+        : `Valuta la prestazione del ${shortDate(previous[1]?.date)}`;
+      prev2Indicator.addEventListener('click', () => {
+        const rendered = renderPerformanceIndicator(prev2Indicator, previousRaw2, previousRaw3, true);
+        if (!rendered) alert('Servono kg e ripetizioni validi in entrambe le sessioni.');
+      });
 
       const machineInput = fragment.querySelector('.machine-input');
       machineInput.value = override.machine || '';
