@@ -96,9 +96,24 @@ function mergeStores(current, incoming) {
       if (dateCmp !== 0) return dateCmp;
       return String(a.dayId || '').localeCompare(String(b.dayId || ''));
     }),
-    exerciseOverrides: {
-      ...(current.exerciseOverrides || {}),
-      ...(incoming.exerciseOverrides || {}),
-    },
+    exerciseOverrides: mergeExerciseOverrides(
+      current.exerciseOverrides || {},
+      incoming.exerciseOverrides || {}
+    ),
   };
+}
+
+
+function mergeExerciseOverrides(current, incoming) {
+  const merged = { ...current };
+
+  for (const [slotKey, incomingSlot] of Object.entries(incoming || {})) {
+    if (!incomingSlot || typeof incomingSlot !== 'object') continue;
+    merged[slotKey] = {
+      ...(current?.[slotKey] || {}),
+      ...incomingSlot,
+    };
+  }
+
+  return merged;
 }
