@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
   <meta name="theme-color" content="#111827" />
   <title>Workout Logbook</title>
-  <link rel="stylesheet" href="./styles.css?v=6.7-dynamic-sets" />
+  <link rel="stylesheet" href="./styles.css?v=6.8-performance-indicator" />
 </head>
 <body>
   <main class="app">
@@ -36,7 +36,10 @@
       <div class="exercise-head-row">
         <div class="exercise-head">
           <h2 class="exercise-name"></h2>
-          <div class="exercise-meta"></div>
+          <div class="exercise-meta-row">
+            <div class="exercise-meta"></div>
+            <div class="performance-indicator" hidden aria-live="polite"></div>
+          </div>
           <div class="exercise-machine-block">
             <label class="machine-field">Macchina
               <input class="machine-input" type="text" placeholder="es. Precor nera" autocomplete="off">
