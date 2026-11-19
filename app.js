@@ -408,6 +408,7 @@
     const thumb = fragment.querySelector('.machine-photo-thumb');
     const addBtn = fragment.querySelector('.machine-photo-add');
     const changeBtn = fragment.querySelector('.machine-photo-change');
+    const removeBtn = fragment.querySelector('.machine-photo-remove');
     const fileInput = fragment.querySelector('.machine-photo-file');
 
     const version = override.imageVersion || '';
@@ -417,15 +418,48 @@
       openBtn.hidden = false;
       addBtn.hidden = true;
       changeBtn.hidden = false;
+      removeBtn.hidden = false;
       openBtn.addEventListener('click', () => openPhotoModal(url));
     } else {
       openBtn.hidden = true;
       addBtn.hidden = false;
       changeBtn.hidden = true;
+      removeBtn.hidden = true;
     }
 
     addBtn.addEventListener('click', () => fileInput.click());
     changeBtn.addEventListener('click', () => fileInput.click());
+    removeBtn.addEventListener('click', async () => {
+      if (!confirm('Rimuovere la foto di questa macchina?')) return;
+
+      try {
+        setSyncStatus('Rimozione foto…', 'working');
+        removeBtn.disabled = true;
+        changeBtn.disabled = true;
+
+        const response = await apiFetchUrl(`/api/machine-image?slot=${encodeURIComponent(slotKey)}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) throw new Error(await responseError(response));
+
+        const overrides = ensureOverridesStore();
+        if (overrides[slotKey]) {
+          delete overrides[slotKey].imageVersion;
+          if (Object.keys(overrides[slotKey]).length === 0) delete overrides[slotKey];
+        }
+        saveStore();
+        setSyncStatus('Cloud ✓', 'ok');
+        renderExercises();
+      } catch (error) {
+        console.error(error);
+        setSyncStatus('Rimozione fallita', 'error');
+        alert(error.message || 'Rimozione foto fallita');
+      } finally {
+        removeBtn.disabled = false;
+        changeBtn.disabled = false;
+      }
+    });
 
     fileInput.addEventListener('change', async () => {
       const file = fileInput.files?.[0];
