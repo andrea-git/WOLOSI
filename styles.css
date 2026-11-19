@@ -739,3 +739,27 @@ textarea {
   color: #b91c1c;
   background: #fef2f2;
 }
+
+
+/* v6.9 — manual performance evaluation */
+.performance-evaluate-btn {
+  flex: 0 0 auto;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid #94a3b8 !important;
+  border-radius: 7px;
+  background: #fff;
+  color: #1f2937;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.performance-evaluate-btn:disabled {
+  opacity: .35;
+}
+
+@media (max-width: 430px) {
+  .exercise-meta-row {
+    flex-wrap: wrap;
+  }
+}
