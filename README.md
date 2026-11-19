@@ -1,5 +1,3 @@
-# Workout Logbook — v7 Dark
-
 # Workout Logbook Cloud
 
 Logbook mobile-first con sincronizzazione cloud tra dispositivi.
@@ -56,7 +54,3 @@ Per testare Blob anche in locale, collega prima la cartella al progetto Vercel (
 ## Modificare la scheda
 
 Modifica `workout.json`. Mantieni stabile l'`id` degli esercizi se vuoi mantenere lo storico associato.
-
-
-## v7
-Tema scuro ad alto contrasto. Nessuna modifica alla logica di sync, autosave o storage.
