@@ -96,5 +96,9 @@ function mergeStores(current, incoming) {
       if (dateCmp !== 0) return dateCmp;
       return String(a.dayId || '').localeCompare(String(b.dayId || ''));
     }),
+    exerciseOverrides: {
+      ...(current.exerciseOverrides || {}),
+      ...(incoming.exerciseOverrides || {}),
+    },
   };
 }
