@@ -1,4 +1,4 @@
-import { get, put } from '@vercel/blob';
+import { del, get, put } from '@vercel/blob';
 
 const PREFIX = 'workout-logbook/machines';
 
@@ -27,6 +27,11 @@ export default async function handler(req, res) {
       return res.status(200).send(buffer);
     }
 
+    if (req.method === 'DELETE') {
+      await del(path);
+      return res.status(200).json({ ok: true });
+    }
+
     if (req.method === 'POST') {
       const dataUrl = req.body?.dataUrl;
       if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:image/jpeg;base64,')) {
@@ -50,7 +55,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, imageVersion: Date.now() });
     }
 
-    res.setHeader('Allow', 'GET, POST');
+    res.setHeader('Allow', 'GET, POST, DELETE');
     return res.status(405).json({ error: 'Metodo non consentito' });
   } catch (error) {
     console.error(error);
