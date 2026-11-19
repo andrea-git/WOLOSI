@@ -167,7 +167,17 @@
 
       fragment.querySelector('.exercise-name').textContent = exercise.name;
       fragment.querySelector('.exercise-meta').textContent = `${exercise.sets} × ${exercise.reps}${exercise.failure ? ` ${exercise.failure}` : ''}${exercise.optional ? ' · opzionale' : ''}`;
-      renderPerformanceIndicator(fragment, current, previous[0]?.exercises?.[effectiveId]);
+      const evaluateBtn = fragment.querySelector('.performance-evaluate-btn');
+      const indicatorEl = fragment.querySelector('.performance-indicator');
+      evaluateBtn.disabled = !previous[0]?.exercises?.[effectiveId];
+      evaluateBtn.title = evaluateBtn.disabled ? 'Nessuna sessione precedente confrontabile' : 'Valuta la prestazione';
+      evaluateBtn.addEventListener('click', () => {
+        const liveSession = getOrCreateSession(day);
+        const liveCurrent = normalizeExerciseLog(liveSession.exercises[effectiveId], exercise.sets);
+        const previousRaw = previous[0]?.exercises?.[effectiveId];
+        const rendered = renderPerformanceIndicator(indicatorEl, liveCurrent, previousRaw);
+        if (!rendered) alert('Servono kg e ripetizioni validi sia oggi sia nella sessione precedente.');
+      });
       fragment.querySelector('.exercise-static-note').textContent = exercise.note || '';
 
       const machineInput = fragment.querySelector('.machine-input');
@@ -811,13 +821,12 @@
     }
   }
 
-  function renderPerformanceIndicator(fragment, currentLog, previousRawLog) {
-    const el = fragment.querySelector('.performance-indicator');
-    if (!el || !previousRawLog) return;
+  function renderPerformanceIndicator(el, currentLog, previousRawLog) {
+    if (!el || !previousRawLog) return false;
 
     const current = performanceMetrics(currentLog);
     const previous = performanceMetrics(previousRawLog);
-    if (!current || !previous) return;
+    if (!current || !previous) return false;
 
     const result = comparePerformance(current, previous);
     const symbols = { up: '↑', equal: '=', down: '↓' };
@@ -828,6 +837,7 @@
     el.textContent = symbols[result];
     el.title = `${labels[result]} · tonnellaggio ${formatMetric(current.tonnage)} kg vs ${formatMetric(previous.tonnage)} kg · e1RM ${formatMetric(current.e1rm)} vs ${formatMetric(previous.e1rm)}`;
     el.setAttribute('aria-label', el.title);
+    return true;
   }
 
   function performanceMetrics(log) {
