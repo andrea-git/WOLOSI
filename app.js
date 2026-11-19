@@ -173,9 +173,14 @@
       const prev1Indicator = fragment.querySelector('.prev1-performance-indicator');
       const prev2Indicator = fragment.querySelector('.prev2-performance-indicator');
 
+      const currentRaw = session.exercises[effectiveId];
       const previousRaw1 = previous[0]?.exercises?.[effectiveId];
       const previousRaw2 = previous[1]?.exercises?.[effectiveId];
       const previousRaw3 = previous[2]?.exercises?.[effectiveId];
+
+      restorePerformanceEvaluation(currentIndicator, currentRaw, previousRaw1, previous[0]?.id);
+      restorePerformanceEvaluation(prev1Indicator, previousRaw1, previousRaw2, previous[1]?.id);
+      restorePerformanceEvaluation(prev2Indicator, previousRaw2, previousRaw3, previous[2]?.id);
 
       currentIndicator.disabled = !previousRaw1;
       currentIndicator.title = currentIndicator.disabled
@@ -184,7 +189,14 @@
       currentIndicator.addEventListener('click', () => {
         const liveSession = getOrCreateSession(day);
         const liveCurrent = normalizeExerciseLog(liveSession.exercises[effectiveId], exercise.sets);
-        const rendered = renderPerformanceIndicator(currentIndicator, liveCurrent, previousRaw1, true);
+        const rendered = evaluateAndPersistPerformance(
+          currentIndicator,
+          liveSession,
+          effectiveId,
+          liveCurrent,
+          previousRaw1,
+          previous[0]?.id
+        );
         if (!rendered) alert('Servono kg e ripetizioni validi sia oggi sia nella sessione precedente.');
       });
 
@@ -193,7 +205,14 @@
         ? 'Nessuna sessione precedente confrontabile'
         : `Valuta la prestazione del ${shortDate(previous[0]?.date)}`;
       prev1Indicator.addEventListener('click', () => {
-        const rendered = renderPerformanceIndicator(prev1Indicator, previousRaw1, previousRaw2, true);
+        const rendered = evaluateAndPersistPerformance(
+          prev1Indicator,
+          previous[0],
+          effectiveId,
+          previousRaw1,
+          previousRaw2,
+          previous[1]?.id
+        );
         if (!rendered) alert('Servono kg e ripetizioni validi in entrambe le sessioni.');
       });
 
@@ -202,7 +221,14 @@
         ? 'Nessuna sessione precedente confrontabile'
         : `Valuta la prestazione del ${shortDate(previous[1]?.date)}`;
       prev2Indicator.addEventListener('click', () => {
-        const rendered = renderPerformanceIndicator(prev2Indicator, previousRaw2, previousRaw3, true);
+        const rendered = evaluateAndPersistPerformance(
+          prev2Indicator,
+          previous[1],
+          effectiveId,
+          previousRaw2,
+          previousRaw3,
+          previous[2]?.id
+        );
         if (!rendered) alert('Servono kg e ripetizioni validi in entrambe le sessioni.');
       });
 
@@ -434,6 +460,7 @@
       reps: Array.from({ length: count }, () => ''),
       rir: Array.from({ length: count }, () => ''),
       notes: '',
+      performanceEvaluation: null,
     };
   }
 
@@ -448,6 +475,7 @@
       reps: ensureLength(log.reps || [], count),
       rir: ensureLength(log.rir || [], count),
       notes: log.notes || '',
+      performanceEvaluation: log.performanceEvaluation || null,
     };
   }
 
@@ -845,6 +873,52 @@
       setSyncStatus('Import fallito', 'error');
       alert(error.message || 'Import fallito');
     }
+  }
+
+  function performanceSignature(log) {
+    if (!log) return '';
+    return JSON.stringify({
+      setCount: Number(log.setCount) || 0,
+      loads: Array.from(log.loads || []),
+      reps: Array.from(log.reps || []),
+      rir: Array.from(log.rir || []),
+    });
+  }
+
+  function evaluateAndPersistPerformance(el, session, exerciseId, currentLog, previousRawLog, previousSessionId) {
+    if (!session || !exerciseId || !currentLog || !previousRawLog || !previousSessionId) return false;
+
+    const rendered = renderPerformanceIndicator(el, currentLog, previousRawLog, true);
+    if (!rendered) return false;
+
+    const exerciseLog = session.exercises?.[exerciseId];
+    if (!exerciseLog) return false;
+
+    exerciseLog.performanceEvaluation = {
+      result: comparePerformance(performanceMetrics(currentLog), performanceMetrics(previousRawLog)),
+      currentSignature: performanceSignature(currentLog),
+      previousSignature: performanceSignature(previousRawLog),
+      previousSessionId,
+      evaluatedAt: Date.now(),
+    };
+
+    session.updatedAt = Date.now();
+    saveStore();
+    return true;
+  }
+
+  function restorePerformanceEvaluation(el, currentLog, previousRawLog, previousSessionId) {
+    if (!el || !currentLog || !previousRawLog || !previousSessionId) return false;
+
+    const saved = currentLog.performanceEvaluation;
+    if (!saved) return false;
+
+    const valid = saved.currentSignature === performanceSignature(currentLog)
+      && saved.previousSignature === performanceSignature(previousRawLog)
+      && saved.previousSessionId === previousSessionId;
+
+    if (!valid) return false;
+    return renderPerformanceIndicator(el, currentLog, previousRawLog, true);
   }
 
   function renderPerformanceIndicator(el, currentLog, previousRawLog, keepInteractive = false) {
