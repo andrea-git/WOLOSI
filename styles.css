@@ -609,3 +609,47 @@ textarea {
   font-size: 10px;
   font-weight: 800;
 }
+
+
+/* v6.6 — photo controls outside thumbnail */
+.machine-photo-area {
+  width: 122px;
+  display: grid;
+  gap: 6px;
+}
+
+.machine-photo-controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 5px;
+  width: 100%;
+}
+
+.machine-photo-change,
+.machine-photo-remove {
+  position: static !important;
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.machine-photo-change {
+  border: 1px solid #94a3b8 !important;
+  background: #fff;
+  color: #1f2937;
+}
+
+.machine-photo-remove {
+  border: 1px solid #dc2626 !important;
+  background: #fff7f7;
+  color: #991b1b;
+}
+
+@media (max-width: 430px) {
+  .machine-photo-area {
+    width: 116px;
+  }
+}
