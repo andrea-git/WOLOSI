@@ -54,3 +54,7 @@ Per testare Blob anche in locale, collega prima la cartella al progetto Vercel (
 ## Modificare la scheda
 
 Modifica `workout.json`. Mantieni stabile l'`id` degli esercizi se vuoi mantenere lo storico associato.
+
+
+## v6.1 crisp
+Rendering mobile ottimizzato: input 16px, microtesti >=10px, bordi 1px, niente optimizeLegibility/scaling.
