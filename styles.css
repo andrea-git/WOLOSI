@@ -815,3 +815,169 @@ textarea {
     font-size: 14px;
   }
 }
+
+
+/* v7.2 — extended history */
+.table-actions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 7px;
+}
+
+.table-actions-row .set-row-controls {
+  margin-top: 0;
+}
+
+.history-open-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid #94a3b8 !important;
+  border-radius: 8px;
+  background: #fff;
+  color: #111827;
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.history-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: rgba(15, 23, 42, .55);
+}
+
+.history-modal-backdrop[hidden] {
+  display: none !important;
+}
+
+.history-modal {
+  width: min(96vw, 920px);
+  max-height: 88vh;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid #a9b6c7;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, .28);
+}
+
+.history-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.history-modal-head h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.history-modal-meta {
+  margin-top: 2px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.history-modal-scroller {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px;
+}
+
+.extended-history-table {
+  min-width: max-content;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.extended-history-table th,
+.extended-history-table td {
+  min-width: 92px;
+  padding: 7px 8px;
+  border-bottom: 1px solid #cbd5e1;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.extended-history-table th:first-child,
+.extended-history-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  min-width: 54px;
+  background: #fff;
+  font-weight: 900;
+}
+
+.extended-history-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
+}
+
+.extended-history-table thead th:first-child {
+  z-index: 3;
+}
+
+.extended-history-head {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.extended-history-head .performance-indicator {
+  margin-left: 0;
+}
+
+.history-modal-footer {
+  display: flex;
+  justify-content: center;
+  padding: 10px 12px 12px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.history-load-more {
+  min-height: 36px;
+  padding: 7px 14px;
+  border: 1px solid #94a3b8 !important;
+  border-radius: 8px;
+  background: #fff;
+  color: #111827;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.history-empty {
+  padding: 28px 12px;
+  color: #64748b;
+  text-align: center;
+  font-weight: 700;
+}
+
+@media (max-width: 430px) {
+  .history-modal {
+    width: 96vw;
+    max-height: 86vh;
+  }
+
+  .extended-history-table th,
+  .extended-history-table td {
+    min-width: 84px;
+    padding-inline: 6px;
+  }
+}
