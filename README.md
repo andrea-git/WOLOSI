@@ -1,34 +1,56 @@
-# Workout Logbook
+# Workout Logbook Cloud
 
-App statica mobile-first, senza backend e senza dipendenze.
+Logbook mobile-first con sincronizzazione cloud tra dispositivi.
 
-## Cosa fa
+## Come funziona
 
-- carica la scheda da `workout.json`
-- tab G1-G5
-- registra **kg, reps e RIR per ogni serie**
-- note libere per esercizio
-- autosave in `localStorage` dopo 300 ms
-- mostra le ultime 2 sessioni dello stesso giorno/esercizio nel formato `kg × reps RIR`
-- pulsante **Copia ultimo** per ogni esercizio: copia kg, reps e RIR dell'ultima sessione nella data corrente
-- export/import backup JSON
-- compatibile con i dati già salvati nella versione precedente: i vecchi carichi restano validi e reps/RIR partono vuoti
+- `workout.json` contiene la scheda ed è statico.
+- I log (kg, reps, RIR, note) vengono salvati in un unico JSON privato su **Vercel Blob**.
+- `localStorage` resta solo come cache/fallback e per migrare i dati già presenti da versioni precedenti.
+- Se il Blob remoto è ancora vuoto e sul dispositivo esistono dati locali, al primo avvio vengono caricati automaticamente nel cloud.
+- Mobile e desktop leggono quindi lo stesso storico.
+- Le ultime due sessioni restano filtrate per stesso giorno G1/G2/etc., come nella versione precedente.
+
+## Pubblicazione su Vercel
+
+1. Pubblica questa cartella come progetto Vercel.
+2. Nel progetto Vercel crea/collega uno **Blob Store privato**.
+3. Il progetto usa `@vercel/blob` e le Functions Vercel; sui nuovi store Vercel usa OIDC automaticamente.
+4. Consigliato: in `Settings > Environment Variables` aggiungi:
+
+   `LOGBOOK_PIN=un-pin-scelto-da-te`
+
+   Se imposti il PIN, al primo accesso da ogni dispositivo l'app lo chiede una volta e lo conserva solo nel localStorage di quel browser.
+5. Esegui un nuovo deploy dopo aver collegato Blob / aggiunto le variabili.
+
+## Migrazione dei dati già presenti sul telefono
+
+Non serve importare manualmente se mantieni lo stesso dominio Vercel:
+
+- apri la nuova versione **prima dal telefono che contiene già i log**;
+- se il Blob è vuoto, l'app rileva i dati locali e li invia automaticamente nel cloud;
+- quando compare `Cloud ✓`, apri il sito dal desktop: troverai gli stessi dati.
+
+Per sicurezza è comunque consigliato fare prima un Export JSON dal telefono.
+
+## Backup
+
+- Freccia giù: esporta tutto il logbook in JSON.
+- Freccia su: importa un backup; l'import viene sincronizzato anche sul Blob remoto.
 
 ## Avvio locale
 
-Dalla root del progetto:
+La versione cloud richiede le API Vercel; `python -m http.server` non basta più.
+
+Usa `start-logbook.bat` oppure:
 
 ```bash
-python -m http.server 9000
+npm install
+npx vercel dev --listen 9000
 ```
 
-Poi apri `http://localhost:9000`.
-
-## Vercel
-
-Carica la cartella/repository su Vercel come progetto statico.
-Non ci sono build command né dipendenze.
+Per testare Blob anche in locale, collega prima la cartella al progetto Vercel (`vercel link`) e recupera l'ambiente del progetto secondo la configurazione Vercel corrente.
 
 ## Modificare la scheda
 
-Modifica `workout.json`. Mantieni stabile l'`id` di un esercizio se vuoi conservare lo storico associato.
+Modifica `workout.json`. Mantieni stabile l'`id` degli esercizi se vuoi mantenere lo storico associato.

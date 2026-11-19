@@ -1,10 +1,17 @@
 @echo off
 cd /d "%~dp0"
-start "" "http://localhost:9000"
-where py >nul 2>nul
-if %errorlevel%==0 (
-    py -m http.server 9000
-) else (
-    python -m http.server 9000
+
+where npm >nul 2>nul
+if errorlevel 1 (
+  echo Node.js/npm non trovato.
+  pause
+  exit /b 1
 )
+
+if not exist node_modules (
+  call npm install
+)
+
+start "" "http://localhost:9000"
+npx vercel dev --listen 9000
 pause

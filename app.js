@@ -2,12 +2,18 @@
   'use strict';
 
   const STORE_KEY = 'workout-logbook:v1';
+  const PIN_KEY = 'workout-logbook:pin';
+  const API_URL = '/api/logbook';
+
   const state = {
     plan: null,
     activeDayId: 'G1',
     date: localDateISO(),
-    store: loadStore(),
+    store: loadLocalStore(),
     saveTimer: null,
+    cloudTimer: null,
+    cloudBusy: false,
+    pendingCloudJson: null,
   };
 
   const els = {
@@ -19,6 +25,7 @@
     exportBtn: document.getElementById('exportBtn'),
     importBtn: document.getElementById('importBtn'),
     importFile: document.getElementById('importFile'),
+    syncStatus: document.getElementById('syncStatus'),
   };
 
   init();
@@ -26,12 +33,15 @@
   async function init() {
     wireGlobalEvents();
     els.dateInput.value = state.date;
+    setSyncStatus('Cloud…', 'working');
 
     try {
       const response = await fetch('./workout.json', { cache: 'no-store' });
       if (!response.ok) throw new Error('Impossibile caricare workout.json');
       state.plan = await response.json();
       state.activeDayId = state.plan.days?.[0]?.id || 'G1';
+
+      await initializeCloudStore();
       render();
     } catch (error) {
       els.exerciseList.innerHTML = `<div class="empty">${escapeHtml(error.message || 'Errore caricamento scheda')}</div>`;
@@ -47,6 +57,40 @@
     els.exportBtn.addEventListener('click', exportBackup);
     els.importBtn.addEventListener('click', () => els.importFile.click());
     els.importFile.addEventListener('change', importBackup);
+  }
+
+  async function initializeCloudStore() {
+    const local = loadLocalStore();
+
+    try {
+      const response = await apiFetch({ method: 'GET', cache: 'no-store' });
+
+      if (response.status === 404) {
+        state.store = local;
+        saveLocalStore();
+
+        if (hasStoreData(local)) {
+          setSyncStatus('Migrazione…', 'working');
+          await pushRemoteNow(local);
+          setSyncStatus('Cloud ✓', 'ok');
+        } else {
+          setSyncStatus('Cloud ✓', 'ok');
+        }
+        return;
+      }
+
+      if (!response.ok) throw new Error(await responseError(response));
+
+      const payload = await response.json();
+      validateStore(payload.data);
+      state.store = payload.data;
+      saveLocalStore();
+      setSyncStatus('Cloud ✓', 'ok');
+    } catch (error) {
+      console.error(error);
+      state.store = local;
+      setSyncStatus('Solo locale', 'error');
+    }
   }
 
   function render() {
@@ -108,6 +152,16 @@
           reps: [...prev1.reps],
           rir: [...prev1.rir],
         };
+        target.updatedAt = Date.now();
+        upsertSession(target);
+        renderExercises();
+      });
+
+      const clearBtn = fragment.querySelector('.clear-today-btn');
+      clearBtn.addEventListener('click', () => {
+        const target = getOrCreateSession(day);
+        target.exercises[exercise.id] = emptyExerciseLog(exercise.sets);
+        target.updatedAt = Date.now();
         upsertSession(target);
         renderExercises();
       });
@@ -228,6 +282,10 @@
     });
   }
 
+  function hasStoreData(store) {
+    return Array.isArray(store?.sessions) && store.sessions.some(hasAnyData);
+  }
+
   function hasExerciseSeriesData(exerciseLog) {
     return exerciseLog.loads.some(Boolean)
       || exerciseLog.reps.some(Boolean)
@@ -267,24 +325,117 @@
     return copy.slice(0, length);
   }
 
-  function loadStore() {
-    try {
-      const raw = localStorage.getItem(STORE_KEY);
-      if (!raw) return { version: 1, sessions: [] };
-      const parsed = JSON.parse(raw);
-      if (parsed?.version !== 1 || !Array.isArray(parsed.sessions)) throw new Error('invalid');
-      return parsed;
-    } catch {
-      return { version: 1, sessions: [] };
+  function emptyStore() {
+    return { version: 1, sessions: [] };
+  }
+
+  function validateStore(store) {
+    if (!store || store.version !== 1 || !Array.isArray(store.sessions)) {
+      throw new Error('Formato logbook non valido');
     }
   }
 
-  function saveStore() {
+  function loadLocalStore() {
+    try {
+      const raw = localStorage.getItem(STORE_KEY);
+      if (!raw) return emptyStore();
+      const parsed = JSON.parse(raw);
+      validateStore(parsed);
+      return parsed;
+    } catch {
+      return emptyStore();
+    }
+  }
+
+  function saveLocalStore() {
     localStorage.setItem(STORE_KEY, JSON.stringify(state.store));
   }
 
+  function saveStore() {
+    saveLocalStore();
+    state.pendingCloudJson = JSON.stringify(state.store);
+    if (state.cloudTimer) clearTimeout(state.cloudTimer);
+    state.cloudTimer = setTimeout(flushCloudQueue, 250);
+  }
+
+  async function flushCloudQueue() {
+    if (state.cloudBusy || !state.pendingCloudJson) return;
+    state.cloudBusy = true;
+
+    try {
+      while (state.pendingCloudJson) {
+        const payload = state.pendingCloudJson;
+        state.pendingCloudJson = null;
+        setSyncStatus('Salvataggio…', 'working');
+
+        const response = await apiFetch({
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+        });
+
+        if (!response.ok) throw new Error(await responseError(response));
+      }
+      setSyncStatus('Cloud ✓', 'ok');
+    } catch (error) {
+      console.error(error);
+      setSyncStatus('Sync fallita', 'error');
+    } finally {
+      state.cloudBusy = false;
+      if (state.pendingCloudJson) flushCloudQueue();
+    }
+  }
+
+  async function pushRemoteNow(store) {
+    const response = await apiFetch({
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(store),
+    });
+    if (!response.ok) throw new Error(await responseError(response));
+    const payload = await response.json();
+    if (payload?.data) {
+      validateStore(payload.data);
+      state.store = payload.data;
+      saveLocalStore();
+    }
+  }
+
+  async function apiFetch(options = {}, allowPinPrompt = true) {
+    const headers = new Headers(options.headers || {});
+    const savedPin = localStorage.getItem(PIN_KEY);
+    if (savedPin) headers.set('X-Logbook-Pin', savedPin);
+
+    const response = await fetch(API_URL, { ...options, headers });
+
+    if (response.status === 401 && allowPinPrompt) {
+      localStorage.removeItem(PIN_KEY);
+      const pin = window.prompt('PIN del logbook:');
+      if (pin === null) return response;
+      localStorage.setItem(PIN_KEY, pin.trim());
+      return apiFetch(options, false);
+    }
+
+    return response;
+  }
+
+  async function responseError(response) {
+    try {
+      const payload = await response.json();
+      return payload?.error || `Errore ${response.status}`;
+    } catch {
+      return `Errore ${response.status}`;
+    }
+  }
+
+  function setSyncStatus(text, mode) {
+    if (!els.syncStatus) return;
+    els.syncStatus.textContent = text;
+    els.syncStatus.dataset.mode = mode || '';
+  }
+
   function exportBackup() {
-    saveStore();
+    saveLocalStore();
     const blob = new Blob([JSON.stringify(state.store, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -303,13 +454,16 @@
 
     try {
       const parsed = JSON.parse(await file.text());
-      if (parsed?.version !== 1 || !Array.isArray(parsed.sessions)) {
-        throw new Error('Formato backup non valido');
-      }
+      validateStore(parsed);
       state.store = parsed;
-      saveStore();
+      saveLocalStore();
+      setSyncStatus('Import…', 'working');
+      await pushRemoteNow(parsed);
+      setSyncStatus('Cloud ✓', 'ok');
       renderExercises();
     } catch (error) {
+      console.error(error);
+      setSyncStatus('Import fallito', 'error');
       alert(error.message || 'Import fallito');
     }
   }
@@ -319,13 +473,20 @@
     const load = log.loads?.[index] || '';
     const reps = log.reps?.[index] || '';
     const rir = log.rir?.[index] || '';
-    if (!load && !reps && !rir) return '—';
+    if (!load && !reps && rir === '') return '—';
 
-    const parts = [];
-    if (load) parts.push(`${escapeHtml(load)}`);
-    if (reps) parts.push(`×${escapeHtml(reps)}`);
-    if (rir !== '') parts.push(`R${escapeHtml(rir)}`);
-    return parts.join(' ');
+    const main = [];
+    if (load) main.push(`${escapeHtml(load)}`);
+    if (reps) main.push(`× ${escapeHtml(reps)}`);
+
+    const mainHtml = main.length
+      ? `<span class="history-main">${main.join(' ')}</span>`
+      : '';
+    const rirHtml = rir !== ''
+      ? `<span class="history-rir">RIR ${escapeHtml(rir)}</span>`
+      : '';
+
+    return `<span class="history-stack">${mainHtml}${rirHtml}</span>`;
   }
 
   function localDateISO() {

@@ -14,11 +14,11 @@
         <h1>Workout Logbook</h1>
         <div id="dayName" class="subtitle"></div>
       </div>
-      <div class="actions">
+      <div class="sync-wrap"><span id="syncStatus" class="sync-status">Cloud…</span><div class="actions">
         <button id="exportBtn" class="icon-btn" title="Esporta backup" aria-label="Esporta backup">⇩</button>
         <button id="importBtn" class="icon-btn" title="Importa backup" aria-label="Importa backup">⇧</button>
         <input id="importFile" type="file" accept="application/json" hidden />
-      </div>
+      </div></div>
     </header>
 
     <nav id="tabs" class="tabs" aria-label="Giorni allenamento"></nav>
@@ -39,7 +39,10 @@
           <div class="exercise-meta"></div>
           <div class="exercise-static-note"></div>
         </div>
-        <button type="button" class="copy-last-btn" title="Copia ultimo workout">Copia ultimo</button>
+        <div class="exercise-actions">
+          <button type="button" class="copy-last-btn" title="Copia ultimo workout">Copia ultimo</button>
+          <button type="button" class="clear-today-btn" title="Pulisci i campi di oggi">Pulisci</button>
+        </div>
       </div>
       <div class="grid-wrap">
         <table class="load-grid">
