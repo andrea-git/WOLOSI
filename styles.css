@@ -206,3 +206,45 @@ textarea {
     font-size: 13px;
   }
 }
+
+
+/* v6.2 — exercise machine + editable ID */
+.exercise-machine-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 8px;
+  margin-top: 7px;
+  max-width: 430px;
+}
+.exercise-machine-row label {
+  display: grid;
+  gap: 3px;
+  font-size: 10px !important;
+  line-height: 1.1;
+  font-weight: 700;
+  color: #344054 !important;
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+.exercise-machine-row input {
+  width: 100%;
+  min-height: 31px !important;
+  height: 31px;
+  padding: 5px 8px;
+  font-size: 13px !important;
+  line-height: 1.1;
+  border-radius: 7px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+.exercise-id-input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+  font-size: 12px !important;
+}
+@media (max-width: 430px) {
+  .exercise-machine-row {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, .9fr);
+    gap: 6px;
+  }
+}
