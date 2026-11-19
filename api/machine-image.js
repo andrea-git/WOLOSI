@@ -5,7 +5,7 @@ const PREFIX = 'workout-logbook/machines';
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
 
-  if (!isAuthorized(req)) {
+  if (req.method !== 'GET' && !isAuthorized(req)) {
     return res.status(401).json({ error: 'PIN non valido' });
   }
 
