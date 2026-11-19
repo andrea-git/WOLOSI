@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
   <meta name="theme-color" content="#111827" />
   <title>Workout Logbook</title>
-  <link rel="stylesheet" href="./styles.css?v=6.9-manual-performance" />
+  <link rel="stylesheet" href="./styles.css?v=7.0-performance-history" />
 </head>
 <body>
   <main class="app">
@@ -36,11 +36,7 @@
       <div class="exercise-head-row">
         <div class="exercise-head">
           <h2 class="exercise-name"></h2>
-          <div class="exercise-meta-row">
-            <div class="exercise-meta"></div>
-            <button type="button" class="performance-evaluate-btn">Valuta</button>
-            <div class="performance-indicator" hidden aria-live="polite"></div>
-          </div>
+          <div class="exercise-meta"></div>
           <div class="exercise-machine-block">
             <label class="machine-field">Macchina
               <input class="machine-input" type="text" placeholder="es. Precor nera" autocomplete="off">
@@ -80,9 +76,18 @@
           <thead>
             <tr>
               <th>Serie</th>
-              <th>Oggi</th>
-              <th class="prev-date-1">—</th>
-              <th class="prev-date-2">—</th>
+              <th class="today-head">
+                <span>Oggi</span>
+                <button type="button" class="performance-indicator performance-trigger current-performance-indicator" title="Valuta la prestazione">?</button>
+              </th>
+              <th class="prev-date-1">
+                <span class="history-date-label">—</span>
+                <span class="performance-indicator prev1-performance-indicator" hidden></span>
+              </th>
+              <th class="prev-date-2">
+                <span class="history-date-label">—</span>
+                <span class="performance-indicator prev2-performance-indicator" hidden></span>
+              </th>
             </tr>
           </thead>
           <tbody></tbody>
