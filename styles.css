@@ -653,3 +653,47 @@ textarea {
     width: 116px;
   }
 }
+
+
+/* v6.7 — add/remove series rows per session */
+.set-row-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  margin-top: 7px;
+}
+
+.add-set-btn,
+.remove-set-btn {
+  min-height: 34px;
+  padding: 6px 11px;
+  border: 1px solid #94a3b8 !important;
+  border-radius: 7px;
+  background: #fff;
+  color: #1f2937;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.add-set-btn {
+  background: #111827;
+  color: #fff;
+  border-color: #111827 !important;
+}
+
+.remove-set-btn:disabled {
+  opacity: .35;
+}
+
+@media (max-width: 430px) {
+  .set-row-controls {
+    gap: 5px;
+  }
+
+  .add-set-btn,
+  .remove-set-btn {
+    min-height: 32px;
+    padding: 5px 9px;
+    font-size: 10px;
+  }
+}
