@@ -16,6 +16,7 @@
     pendingCloudJson: null,
     idEditContext: null,
     historyContext: null,
+    photoCheckedSlots: new Set(),
   };
 
   const els = {
@@ -561,6 +562,19 @@
       addBtn.hidden = false;
       changeBtn.hidden = true;
       removeBtn.hidden = true;
+
+      // Recovery path: the JPEG may still exist even if older logbook merges
+      // lost imageVersion metadata. Probe once per slot and restore metadata.
+      if (!state.photoCheckedSlots.has(slotKey)) {
+        state.photoCheckedSlots.add(slotKey);
+        const probeVersion = `probe-${Date.now()}`;
+        fetch(machinePhotoUrl(slotKey, probeVersion), { cache: 'no-store' })
+          .then((response) => {
+            if (!response.ok) return;
+            setExerciseOverride(slotKey, { imageVersion: Date.now() }, true);
+          })
+          .catch(() => {});
+      }
     }
 
     addBtn.addEventListener('click', () => fileInput.click());
@@ -580,10 +594,11 @@
         if (!response.ok) throw new Error(await responseError(response));
 
         const overrides = ensureOverridesStore();
-        if (overrides[slotKey]) {
-          delete overrides[slotKey].imageVersion;
-          if (Object.keys(overrides[slotKey]).length === 0) delete overrides[slotKey];
-        }
+        overrides[slotKey] = {
+          ...(overrides[slotKey] || {}),
+          imageVersion: null,
+        };
+        state.photoCheckedSlots.add(slotKey);
         saveStore();
         setSyncStatus('Cloud ✓', 'ok');
         renderExercises();
