@@ -32,6 +32,9 @@
     idModalSave: document.getElementById('idModalSave'),
     idModalCancel: document.getElementById('idModalCancel'),
     idModalClose: document.getElementById('idModalClose'),
+    photoModal: document.getElementById('photoModal'),
+    photoModalImage: document.getElementById('photoModalImage'),
+    photoModalClose: document.getElementById('photoModalClose'),
   };
 
   init();
@@ -76,6 +79,11 @@
         saveEditedId();
       }
       if (event.key === 'Escape') closeIdModal();
+    });
+
+    els.photoModalClose.addEventListener('click', closePhotoModal);
+    els.photoModal.addEventListener('click', (event) => {
+      if (event.target === els.photoModal) closePhotoModal();
     });
   }
 
@@ -170,6 +178,8 @@
       fragment.querySelector('.edit-id-btn').addEventListener('click', () => {
         openIdModal(day, exercise, slotKey, effectiveId);
       });
+
+      setupMachinePhoto(fragment, slotKey, override);
       fragment.querySelector('.prev-date-1').textContent = shortDate(previous[0]?.date);
       fragment.querySelector('.prev-date-2').textContent = shortDate(previous[1]?.date);
 
@@ -391,6 +401,114 @@
 
     saveStore();
     if (rerender) renderExercises();
+  }
+
+  function setupMachinePhoto(fragment, slotKey, override) {
+    const openBtn = fragment.querySelector('.machine-photo-open');
+    const thumb = fragment.querySelector('.machine-photo-thumb');
+    const addBtn = fragment.querySelector('.machine-photo-add');
+    const changeBtn = fragment.querySelector('.machine-photo-change');
+    const fileInput = fragment.querySelector('.machine-photo-file');
+
+    const version = override.imageVersion || '';
+    if (version) {
+      const url = machinePhotoUrl(slotKey, version);
+      thumb.src = url;
+      openBtn.hidden = false;
+      addBtn.hidden = true;
+      changeBtn.hidden = false;
+      openBtn.addEventListener('click', () => openPhotoModal(url));
+    } else {
+      openBtn.hidden = true;
+      addBtn.hidden = false;
+      changeBtn.hidden = true;
+    }
+
+    addBtn.addEventListener('click', () => fileInput.click());
+    changeBtn.addEventListener('click', () => fileInput.click());
+
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      fileInput.value = '';
+      if (!file) return;
+
+      try {
+        setSyncStatus('Foto…', 'working');
+        addBtn.disabled = true;
+        changeBtn.disabled = true;
+
+        const dataUrl = await resizeImageToJpeg(file, 1000, 0.82);
+        const response = await apiFetchUrl('/api/machine-image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slot: slotKey, dataUrl }),
+        });
+
+        if (!response.ok) throw new Error(await responseError(response));
+        const payload = await response.json();
+        setExerciseOverride(slotKey, { imageVersion: payload.imageVersion || Date.now() }, true);
+        setSyncStatus('Cloud ✓', 'ok');
+      } catch (error) {
+        console.error(error);
+        setSyncStatus('Foto fallita', 'error');
+        alert(error.message || 'Caricamento foto fallito');
+      } finally {
+        addBtn.disabled = false;
+        changeBtn.disabled = false;
+      }
+    });
+  }
+
+  function machinePhotoUrl(slotKey, version) {
+    return `/api/machine-image?slot=${encodeURIComponent(slotKey)}&v=${encodeURIComponent(version || '')}`;
+  }
+
+  function openPhotoModal(url) {
+    els.photoModalImage.src = url;
+    els.photoModal.hidden = false;
+    document.body.classList.add('modal-open');
+  }
+
+  function closePhotoModal() {
+    els.photoModal.hidden = true;
+    els.photoModalImage.removeAttribute('src');
+    document.body.classList.remove('modal-open');
+  }
+
+  async function resizeImageToJpeg(file, maxSize, quality) {
+    const bitmap = await createImageBitmap(file);
+    const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(bitmap, 0, 0, width, height);
+    bitmap.close?.();
+
+    return canvas.toDataURL('image/jpeg', quality);
+  }
+
+  async function apiFetchUrl(url, options = {}, allowPinPrompt = true) {
+    const headers = new Headers(options.headers || {});
+    const savedPin = localStorage.getItem(PIN_KEY);
+    if (savedPin) headers.set('X-Logbook-Pin', savedPin);
+
+    const response = await fetch(url, { ...options, headers });
+
+    if (response.status === 401 && allowPinPrompt) {
+      localStorage.removeItem(PIN_KEY);
+      const pin = window.prompt('PIN del logbook:');
+      if (pin === null) return response;
+      localStorage.setItem(PIN_KEY, pin.trim());
+      return apiFetchUrl(url, options, false);
+    }
+
+    return response;
   }
 
   function openIdModal(day, exercise, slotKey, effectiveId) {
