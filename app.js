@@ -152,7 +152,7 @@
     els.exerciseList.innerHTML = '';
 
     const session = getOrCreateSession(day);
-    const previous = getPreviousSessions(day.id, state.date, 2);
+    const previous = getPreviousSessions(day.id, state.date, 3);
 
     for (const exercise of day.exercises) {
       const fragment = els.template.content.cloneNode(true);
@@ -167,18 +167,29 @@
 
       fragment.querySelector('.exercise-name').textContent = exercise.name;
       fragment.querySelector('.exercise-meta').textContent = `${exercise.sets} × ${exercise.reps}${exercise.failure ? ` ${exercise.failure}` : ''}${exercise.optional ? ' · opzionale' : ''}`;
-      const evaluateBtn = fragment.querySelector('.performance-evaluate-btn');
-      const indicatorEl = fragment.querySelector('.performance-indicator');
-      evaluateBtn.disabled = !previous[0]?.exercises?.[effectiveId];
-      evaluateBtn.title = evaluateBtn.disabled ? 'Nessuna sessione precedente confrontabile' : 'Valuta la prestazione';
-      evaluateBtn.addEventListener('click', () => {
+      fragment.querySelector('.exercise-static-note').textContent = exercise.note || '';
+
+      const currentIndicator = fragment.querySelector('.current-performance-indicator');
+      const prev1Indicator = fragment.querySelector('.prev1-performance-indicator');
+      const prev2Indicator = fragment.querySelector('.prev2-performance-indicator');
+
+      const previousRaw1 = previous[0]?.exercises?.[effectiveId];
+      const previousRaw2 = previous[1]?.exercises?.[effectiveId];
+      const previousRaw3 = previous[2]?.exercises?.[effectiveId];
+
+      currentIndicator.disabled = !previousRaw1;
+      currentIndicator.title = currentIndicator.disabled
+        ? 'Nessuna sessione precedente confrontabile'
+        : 'Valuta la prestazione di oggi';
+      currentIndicator.addEventListener('click', () => {
         const liveSession = getOrCreateSession(day);
         const liveCurrent = normalizeExerciseLog(liveSession.exercises[effectiveId], exercise.sets);
-        const previousRaw = previous[0]?.exercises?.[effectiveId];
-        const rendered = renderPerformanceIndicator(indicatorEl, liveCurrent, previousRaw);
+        const rendered = renderPerformanceIndicator(currentIndicator, liveCurrent, previousRaw1, true);
         if (!rendered) alert('Servono kg e ripetizioni validi sia oggi sia nella sessione precedente.');
       });
-      fragment.querySelector('.exercise-static-note').textContent = exercise.note || '';
+
+      renderPerformanceIndicator(prev1Indicator, previousRaw1, previousRaw2);
+      renderPerformanceIndicator(prev2Indicator, previousRaw2, previousRaw3);
 
       const machineInput = fragment.querySelector('.machine-input');
       machineInput.value = override.machine || '';
@@ -192,8 +203,8 @@
       });
 
       setupMachinePhoto(fragment, slotKey, override);
-      fragment.querySelector('.prev-date-1').textContent = shortDate(previous[0]?.date);
-      fragment.querySelector('.prev-date-2').textContent = shortDate(previous[1]?.date);
+      fragment.querySelector('.prev-date-1 .history-date-label').textContent = shortDate(previous[0]?.date);
+      fragment.querySelector('.prev-date-2 .history-date-label').textContent = shortDate(previous[1]?.date);
 
       const copyBtn = fragment.querySelector('.copy-last-btn');
       copyBtn.disabled = !hasExerciseSeriesData(prev1);
@@ -821,8 +832,8 @@
     }
   }
 
-  function renderPerformanceIndicator(el, currentLog, previousRawLog) {
-    if (!el || !previousRawLog) return false;
+  function renderPerformanceIndicator(el, currentLog, previousRawLog, keepInteractive = false) {
+    if (!el || !currentLog || !previousRawLog) return false;
 
     const current = performanceMetrics(currentLog);
     const previous = performanceMetrics(previousRawLog);
@@ -833,7 +844,7 @@
     const labels = { up: 'Prestazione migliore', equal: 'Prestazione equivalente', down: 'Prestazione inferiore' };
 
     el.hidden = false;
-    el.className = `performance-indicator performance-${result}`;
+    el.className = `performance-indicator performance-${result}${keepInteractive ? ' performance-trigger' : ''}`;
     el.textContent = symbols[result];
     el.title = `${labels[result]} · tonnellaggio ${formatMetric(current.tonnage)} kg vs ${formatMetric(previous.tonnage)} kg · e1RM ${formatMetric(current.e1rm)} vs ${formatMetric(previous.e1rm)}`;
     el.setAttribute('aria-label', el.title);
