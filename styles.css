@@ -763,3 +763,55 @@ textarea {
     flex-wrap: wrap;
   }
 }
+
+
+/* v7.0 — performance trend in table headers */
+.exercise-meta-row,
+.performance-evaluate-btn {
+  display: none !important;
+}
+
+.load-grid th.today-head,
+.load-grid th.prev-date-1,
+.load-grid th.prev-date-2 {
+  vertical-align: middle;
+}
+
+.load-grid th.today-head > span,
+.load-grid th.prev-date-1 > .history-date-label,
+.load-grid th.prev-date-2 > .history-date-label {
+  vertical-align: middle;
+}
+
+.performance-indicator {
+  margin-left: 5px;
+  width: 22px;
+  height: 22px;
+  font-size: 15px;
+  vertical-align: middle;
+}
+
+.performance-trigger {
+  padding: 0;
+  cursor: pointer;
+}
+
+.performance-trigger:not(.performance-up):not(.performance-equal):not(.performance-down) {
+  color: #64748b;
+  background: #f8fafc;
+  border-color: #94a3b8 !important;
+}
+
+.performance-trigger:disabled {
+  opacity: .28;
+  cursor: default;
+}
+
+@media (max-width: 430px) {
+  .performance-indicator {
+    margin-left: 3px;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+  }
+}
