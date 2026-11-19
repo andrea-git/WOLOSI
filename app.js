@@ -167,6 +167,7 @@
 
       fragment.querySelector('.exercise-name').textContent = exercise.name;
       fragment.querySelector('.exercise-meta').textContent = `${exercise.sets} × ${exercise.reps}${exercise.failure ? ` ${exercise.failure}` : ''}${exercise.optional ? ' · opzionale' : ''}`;
+      renderPerformanceIndicator(fragment, current, previous[0]?.exercises?.[effectiveId]);
       fragment.querySelector('.exercise-static-note').textContent = exercise.note || '';
 
       const machineInput = fragment.querySelector('.machine-input');
@@ -808,6 +809,86 @@
       setSyncStatus('Import fallito', 'error');
       alert(error.message || 'Import fallito');
     }
+  }
+
+  function renderPerformanceIndicator(fragment, currentLog, previousRawLog) {
+    const el = fragment.querySelector('.performance-indicator');
+    if (!el || !previousRawLog) return;
+
+    const current = performanceMetrics(currentLog);
+    const previous = performanceMetrics(previousRawLog);
+    if (!current || !previous) return;
+
+    const result = comparePerformance(current, previous);
+    const symbols = { up: '↑', equal: '=', down: '↓' };
+    const labels = { up: 'Prestazione migliore', equal: 'Prestazione equivalente', down: 'Prestazione inferiore' };
+
+    el.hidden = false;
+    el.className = `performance-indicator performance-${result}`;
+    el.textContent = symbols[result];
+    el.title = `${labels[result]} · tonnellaggio ${formatMetric(current.tonnage)} kg vs ${formatMetric(previous.tonnage)} kg · e1RM ${formatMetric(current.e1rm)} vs ${formatMetric(previous.e1rm)}`;
+    el.setAttribute('aria-label', el.title);
+  }
+
+  function performanceMetrics(log) {
+    if (!log) return null;
+
+    const loads = Array.from(log.loads || []);
+    const reps = Array.from(log.reps || []);
+    const rir = Array.from(log.rir || []);
+    const count = Math.max(loads.length, reps.length, Number(log.setCount) || 0);
+
+    let tonnage = 0;
+    const e1rms = [];
+
+    for (let i = 0; i < count; i += 1) {
+      const load = Number(String(loads[i] ?? '').replace(',', '.'));
+      const repCount = Number(reps[i]);
+      if (!(load > 0) || !(repCount > 0)) continue;
+
+      const rirValue = Number(rir[i]);
+      const effectiveReps = repCount + (Number.isFinite(rirValue) && rirValue >= 0 ? rirValue : 0);
+
+      tonnage += load * repCount;
+      e1rms.push(load * (1 + effectiveReps / 30));
+    }
+
+    if (!e1rms.length || tonnage <= 0) return null;
+
+    return {
+      tonnage,
+      e1rm: e1rms.reduce((sum, value) => sum + value, 0) / e1rms.length,
+    };
+  }
+
+  function comparePerformance(current, previous) {
+    const strengthRatio = current.e1rm / previous.e1rm;
+    const volumeRatio = current.tonnage / previous.tonnage;
+
+    // Forte calo di capacità stimata: il volume extra non basta a chiamarlo progresso.
+    if (strengthRatio < 0.95) return 'down';
+
+    // Capacità sostanzialmente mantenuta: decide il lavoro totale.
+    if (strengthRatio >= 0.98 && strengthRatio <= 1.02) {
+      if (volumeRatio > 1.03) return 'up';
+      if (volumeRatio < 0.97) return 'down';
+      return 'equal';
+    }
+
+    // Capacità chiaramente superiore: verde se il volume non crolla in modo marcato.
+    if (strengthRatio > 1.02) {
+      if (volumeRatio >= 0.95) return 'up';
+      return 'equal';
+    }
+
+    // Lieve calo di capacità (2–5%): un volume molto maggiore lo rende equivalente,
+    // non migliore; altrimenti è un peggioramento.
+    if (volumeRatio > 1.05) return 'equal';
+    return 'down';
+  }
+
+  function formatMetric(value) {
+    return Number(value).toLocaleString('it-IT', { maximumFractionDigits: 1 });
   }
 
   function formatHistoricalSet(log, index) {
