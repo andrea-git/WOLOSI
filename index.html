@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
   <meta name="theme-color" content="#111827" />
   <title>Workout Logbook</title>
-  <link rel="stylesheet" href="./styles.css?v=6.2-machine-id" />
+  <link rel="stylesheet" href="./styles.css?v=6.3-id-modal" />
 </head>
 <body>
   <main class="app">
@@ -37,9 +37,17 @@
         <div class="exercise-head">
           <h2 class="exercise-name"></h2>
           <div class="exercise-meta"></div>
-          <div class="exercise-machine-row">
-            <label>Macchina <input class="machine-input" type="text" placeholder="es. Precor nera" autocomplete="off"></label>
-            <label>ID <input class="exercise-id-input" type="text" autocomplete="off" spellcheck="false"></label>
+          <div class="exercise-machine-block">
+            <label class="machine-field">Macchina
+              <input class="machine-input" type="text" placeholder="es. Precor nera" autocomplete="off">
+            </label>
+            <div class="exercise-id-row">
+              <div class="exercise-id-display">
+                <span class="exercise-id-label">ID</span>
+                <code class="exercise-id-value"></code>
+              </div>
+              <button type="button" class="edit-id-btn">Modifica ID</button>
+            </div>
           </div>
           <div class="exercise-static-note"></div>
         </div>
@@ -64,6 +72,24 @@
       <textarea class="notes" rows="2" placeholder="Note…"></textarea>
     </article>
   </template>
+
+
+  <div id="idModal" class="modal-backdrop" hidden>
+    <div class="id-modal" role="dialog" aria-modal="true" aria-labelledby="idModalTitle">
+      <div class="id-modal-head">
+        <h2 id="idModalTitle">Modifica ID esercizio</h2>
+        <button id="idModalClose" type="button" class="modal-close" aria-label="Chiudi">×</button>
+      </div>
+      <p class="id-modal-warning">Cambiare ID crea da questo momento uno storico separato. Lo storico precedente resta associato al vecchio ID.</p>
+      <label class="id-modal-field">Nuovo ID
+        <input id="idModalInput" type="text" autocomplete="off" spellcheck="false">
+      </label>
+      <div class="id-modal-actions">
+        <button id="idModalCancel" type="button" class="modal-secondary">Annulla</button>
+        <button id="idModalSave" type="button" class="modal-primary">Salva ID</button>
+      </div>
+    </div>
+  </div>
 
   <script src="./app.js" defer></script>
 </body>
