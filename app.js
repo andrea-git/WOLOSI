@@ -15,6 +15,7 @@
     cloudBusy: false,
     pendingCloudJson: null,
     idEditContext: null,
+    historyContext: null,
   };
 
   const els = {
@@ -35,6 +36,12 @@
     photoModal: document.getElementById('photoModal'),
     photoModalImage: document.getElementById('photoModalImage'),
     photoModalClose: document.getElementById('photoModalClose'),
+    historyModal: document.getElementById('historyModal'),
+    historyModalTitle: document.getElementById('historyModalTitle'),
+    historyModalMeta: document.getElementById('historyModalMeta'),
+    historyModalScroller: document.getElementById('historyModalScroller'),
+    historyModalClose: document.getElementById('historyModalClose'),
+    historyLoadMore: document.getElementById('historyLoadMore'),
   };
 
   init();
@@ -84,6 +91,16 @@
     els.photoModalClose.addEventListener('click', closePhotoModal);
     els.photoModal.addEventListener('click', (event) => {
       if (event.target === els.photoModal) closePhotoModal();
+    });
+
+    els.historyModalClose.addEventListener('click', closeHistoryModal);
+    els.historyModal.addEventListener('click', (event) => {
+      if (event.target === els.historyModal) closeHistoryModal();
+    });
+    els.historyLoadMore.addEventListener('click', () => {
+      if (!state.historyContext) return;
+      state.historyContext.limit += 10;
+      renderExtendedHistory();
     });
   }
 
@@ -360,6 +377,11 @@
         target.updatedAt = Date.now();
         upsertSession(target);
         renderExercises();
+      });
+
+      const historyOpenBtn = fragment.querySelector('.history-open-btn');
+      historyOpenBtn.addEventListener('click', () => {
+        openHistoryModal(day, exercise, effectiveId);
       });
 
       const notes = fragment.querySelector('.notes');
@@ -668,6 +690,124 @@
     }
 
     return response;
+  }
+
+  function openHistoryModal(day, exercise, effectiveId) {
+    state.historyContext = {
+      day,
+      exercise,
+      effectiveId,
+      limit: 10,
+    };
+    els.historyModalTitle.textContent = exercise.name;
+    els.historyModalMeta.textContent = `${day.id} · storico esteso`;
+    els.historyModal.hidden = false;
+    document.body.classList.add('modal-open');
+    renderExtendedHistory();
+  }
+
+  function closeHistoryModal() {
+    state.historyContext = null;
+    els.historyModal.hidden = true;
+    els.historyModalScroller.innerHTML = '';
+    document.body.classList.remove('modal-open');
+  }
+
+  function renderExtendedHistory() {
+    const ctx = state.historyContext;
+    if (!ctx) return;
+
+    const all = getPreviousSessions(ctx.day.id, state.date, Number.MAX_SAFE_INTEGER);
+    const visible = all.slice(0, ctx.limit);
+    const needed = all.slice(0, Math.min(all.length, ctx.limit + 1));
+
+    els.historyModalScroller.innerHTML = '';
+
+    if (!visible.length) {
+      els.historyModalScroller.innerHTML = '<div class="history-empty">Nessuno storico disponibile.</div>';
+      els.historyLoadMore.hidden = true;
+      return;
+    }
+
+    const maxSets = visible.reduce((max, session) => {
+      const log = session.exercises?.[ctx.effectiveId];
+      return Math.max(max, Number(log?.setCount) || log?.loads?.length || 0);
+    }, 1);
+
+    const table = document.createElement('table');
+    table.className = 'extended-history-table';
+
+    const thead = document.createElement('thead');
+    const headRow = document.createElement('tr');
+    const seriesHead = document.createElement('th');
+    seriesHead.textContent = 'Serie';
+    headRow.appendChild(seriesHead);
+
+    visible.forEach((session, index) => {
+      const th = document.createElement('th');
+      const wrap = document.createElement('div');
+      wrap.className = 'extended-history-head';
+
+      const dateLabel = document.createElement('span');
+      dateLabel.textContent = shortDate(session.date);
+
+      const indicator = document.createElement('button');
+      indicator.type = 'button';
+      indicator.className = 'performance-indicator performance-trigger';
+      indicator.textContent = '?';
+
+      const currentRaw = session.exercises?.[ctx.effectiveId];
+      const previousSession = needed[index + 1];
+      const previousRaw = previousSession?.exercises?.[ctx.effectiveId];
+
+      restorePerformanceEvaluation(indicator, currentRaw, previousRaw, previousSession?.id);
+
+      indicator.disabled = !currentRaw || !previousRaw;
+      indicator.title = indicator.disabled
+        ? 'Nessuna sessione precedente confrontabile'
+        : `Valuta la prestazione del ${shortDate(session.date)}`;
+
+      indicator.addEventListener('click', () => {
+        const rendered = evaluateAndPersistPerformance(
+          indicator,
+          session,
+          ctx.effectiveId,
+          currentRaw,
+          previousRaw,
+          previousSession?.id
+        );
+        if (!rendered) alert('Servono kg e ripetizioni validi in entrambe le sessioni.');
+      });
+
+      wrap.append(dateLabel, indicator);
+      th.appendChild(wrap);
+      headRow.appendChild(th);
+    });
+
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    for (let i = 0; i < maxSets; i += 1) {
+      const tr = document.createElement('tr');
+      const setCell = document.createElement('td');
+      setCell.textContent = String(i + 1);
+      tr.appendChild(setCell);
+
+      for (const session of visible) {
+        const td = document.createElement('td');
+        td.className = 'history-value';
+        const log = normalizeExerciseLog(session.exercises?.[ctx.effectiveId], Math.max(1, session.exercises?.[ctx.effectiveId]?.setCount || 1));
+        td.innerHTML = formatHistoricalSet(log, i);
+        tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
+    }
+
+    table.appendChild(tbody);
+    els.historyModalScroller.appendChild(table);
+
+    els.historyLoadMore.hidden = visible.length >= all.length;
   }
 
   function openIdModal(day, exercise, slotKey, effectiveId) {
