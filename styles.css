@@ -594,3 +594,18 @@ textarea {
     padding: 6px 7px;
   }
 }
+
+
+/* v6.5 — remove machine photo */
+.machine-photo-remove {
+  position: absolute;
+  left: 5px;
+  bottom: 5px;
+  padding: 4px 7px;
+  border: 1px solid #dc2626 !important;
+  border-radius: 6px;
+  background: rgba(255,247,247,.94);
+  color: #991b1b;
+  font-size: 10px;
+  font-weight: 800;
+}
