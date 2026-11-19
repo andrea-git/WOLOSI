@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
   <meta name="theme-color" content="#111827" />
   <title>Workout Logbook</title>
-  <link rel="stylesheet" href="./styles.css?v=6.3-id-modal" />
+  <link rel="stylesheet" href="./styles.css?v=6.4-machine-photo" />
 </head>
 <body>
   <main class="app">
@@ -51,9 +51,19 @@
           </div>
           <div class="exercise-static-note"></div>
         </div>
-        <div class="exercise-actions">
-          <button type="button" class="copy-last-btn" title="Copia ultimo workout">Copia ultimo</button>
-          <button type="button" class="clear-today-btn" title="Pulisci i campi di oggi">Pulisci</button>
+        <div class="exercise-side">
+          <div class="exercise-actions">
+            <button type="button" class="copy-last-btn" title="Copia ultimo workout">Copia ultimo</button>
+            <button type="button" class="clear-today-btn" title="Pulisci i campi di oggi">Pulisci</button>
+          </div>
+          <div class="machine-photo-box">
+            <button type="button" class="machine-photo-open" title="Apri foto macchina" hidden>
+              <img class="machine-photo-thumb" alt="Foto macchina">
+            </button>
+            <button type="button" class="machine-photo-add">+ Foto</button>
+            <button type="button" class="machine-photo-change" hidden>Cambia</button>
+            <input class="machine-photo-file" type="file" accept="image/*" capture="environment" hidden>
+          </div>
         </div>
       </div>
       <div class="grid-wrap">
@@ -89,6 +99,11 @@
         <button id="idModalSave" type="button" class="modal-primary">Salva ID</button>
       </div>
     </div>
+  </div>
+
+  <div id="photoModal" class="photo-modal-backdrop" hidden>
+    <button id="photoModalClose" class="photo-modal-close" type="button" aria-label="Chiudi foto">×</button>
+    <img id="photoModalImage" class="photo-modal-image" alt="Foto macchina ingrandita">
   </div>
 
   <script src="./app.js" defer></script>
