@@ -1,0 +1,71 @@
+{
+  "name": "Scheda 5 giorni",
+  "days": [
+    {
+      "id": "G1",
+      "name": "Petto / Laterali / Tricipiti",
+      "exercises": [
+        { "id": "incline-chest-press", "name": "Incline Chest Press convergente", "sets": 4, "reps": "8-12", "failure": "CT" },
+        { "id": "horizontal-chest-press", "name": "Horizontal Chest Press", "sets": 3, "reps": "10-15", "failure": "CT" },
+        { "id": "pec-deck", "name": "Pec Deck / Fly Machine", "sets": 3, "reps": "12-15", "failure": "CT" },
+        { "id": "standing-chest-press", "name": "Standing Chest Press", "sets": 2, "reps": "12-15", "failure": "CT" },
+        { "id": "lateral-raise-g1", "name": "Lateral Raise Machine", "sets": 4, "reps": "12-20", "failure": "CT" },
+        { "id": "triceps-extension-g1", "name": "Triceps Extension Machine", "sets": 3, "reps": "10-15", "failure": "CT" },
+        { "id": "pushdown", "name": "Pushdown", "sets": 2, "reps": "12-15", "failure": "CT" }
+      ]
+    },
+    {
+      "id": "G2",
+      "name": "Schiena / Posteriori / Bicipiti",
+      "exercises": [
+        { "id": "row-a", "name": "ROW A chest-supported — upper back", "sets": 4, "reps": "8-12", "failure": "CT" },
+        { "id": "row-b", "name": "ROW B tipo dumbbell row, bilaterale", "sets": 4, "reps": "10-15", "failure": "CT" },
+        { "id": "converging-vertical-pull", "name": "Converging Vertical Pull", "sets": 3, "reps": "10-15", "failure": "CT" },
+        { "id": "second-vertical-pull", "name": "Seconda Vertical Pull / Pulldown", "sets": 2, "reps": "12-15", "failure": "CT" },
+        { "id": "reverse-pec-deck", "name": "Reverse Pec Deck", "sets": 3, "reps": "12-20", "failure": "CT" },
+        { "id": "preacher-curl", "name": "Preacher Curl Machine", "sets": 3, "reps": "10-15", "failure": "CT" },
+        { "id": "standing-curl", "name": "Standing Curl Machine bilaterale", "sets": 2, "reps": "12-15", "failure": "CT" }
+      ]
+    },
+    {
+      "id": "G3",
+      "name": "Gambe",
+      "exercises": [
+        { "id": "belt-squat", "name": "Belt Squat", "sets": 3, "reps": "8-12", "failure": "CT", "note": "Da validare sulla lombare" },
+        { "id": "super-lunge", "name": "Panatta Super Lunge Machine", "sets": 3, "reps": "10-12", "failure": "CT", "note": "Da validare sulla lombare" },
+        { "id": "leg-extension", "name": "Leg Extension", "sets": 4, "reps": "10-15", "failure": "CT" },
+        { "id": "seated-leg-curl", "name": "Seated Leg Curl", "sets": 4, "reps": "10-15", "failure": "CT" },
+        { "id": "leg-curl", "name": "Leg Curl", "sets": 3, "reps": "12-15", "failure": "CT" },
+        { "id": "hip-thrust", "name": "Hip Thrust Machine — se libera", "sets": 3, "reps": "10-15", "failure": "CT", "optional": true },
+        { "id": "panatta-3d-abductor", "name": "Panatta 3D Abductor", "sets": 2, "reps": "15-20", "failure": "CT" },
+        { "id": "calf-machine", "name": "Calf Machine", "sets": 3, "reps": "12-20", "failure": "CT" }
+      ]
+    },
+    {
+      "id": "G4",
+      "name": "Spalle / Petto / Braccia",
+      "exercises": [
+        { "id": "shoulder-press", "name": "Shoulder Press convergente", "sets": 4, "reps": "8-12", "failure": "CT" },
+        { "id": "lateral-raise-g4", "name": "Lateral Raise Machine", "sets": 4, "reps": "12-20", "failure": "CT" },
+        { "id": "face-pull", "name": "Face Pull al cavo", "sets": 3, "reps": "12-20", "failure": "CT" },
+        { "id": "shrug-machine", "name": "Shrug Machine", "sets": 2, "reps": "10-15", "failure": "CT" },
+        { "id": "chest-press-g4", "name": "Chest Press — variante diversa dal G1", "sets": 3, "reps": "10-15", "failure": "CT" },
+        { "id": "curl-machine-g4", "name": "Curl Machine", "sets": 3, "reps": "10-15", "failure": "CT" },
+        { "id": "triceps-extension-g4", "name": "Triceps Extension Machine", "sets": 3, "reps": "10-15", "failure": "CT" }
+      ]
+    },
+    {
+      "id": "G5",
+      "name": "Upper misto / rotondità e spessore",
+      "exercises": [
+        { "id": "pullover-machine", "name": "Pullover Machine", "sets": 3, "reps": "10-15", "failure": "CT" },
+        { "id": "low-cable-fly", "name": "Low Cable Fly / Fly Machine alternativa", "sets": 3, "reps": "12-15", "failure": "CT" },
+        { "id": "chest-supported-row-g5", "name": "Chest-Supported Row — diversa dal G2", "sets": 3, "reps": "10-15", "failure": "CT" },
+        { "id": "lateral-raise-g5", "name": "Lateral Raise Machine — richiamo", "sets": 2, "reps": "15-20", "failure": "CT" },
+        { "id": "hammer-curl", "name": "Hammer / Neutral Curl Machine", "sets": 3, "reps": "10-15", "failure": "CT" },
+        { "id": "seated-dip", "name": "Seated Dip / Triceps Press Machine", "sets": 3, "reps": "10-15", "failure": "CT" },
+        { "id": "standing-multiflight", "name": "Standing Multi-Flight / Fly Machine — ROM medio-finale", "sets": 3, "reps": "12-15", "failure": "CT" }
+      ]
+    }
+  ]
+}

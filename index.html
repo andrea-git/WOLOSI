@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
+  <meta name="theme-color" content="#111827" />
+  <title>Workout Logbook</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div>
+        <h1>Workout Logbook</h1>
+        <div id="dayName" class="subtitle"></div>
+      </div>
+      <div class="actions">
+        <button id="exportBtn" class="icon-btn" title="Esporta backup" aria-label="Esporta backup">⇩</button>
+        <button id="importBtn" class="icon-btn" title="Importa backup" aria-label="Importa backup">⇧</button>
+        <input id="importFile" type="file" accept="application/json" hidden />
+      </div>
+    </header>
+
+    <nav id="tabs" class="tabs" aria-label="Giorni allenamento"></nav>
+
+    <div class="date-row">
+      <label for="dateInput">Data</label>
+      <input id="dateInput" type="date" />
+    </div>
+
+    <section id="exerciseList" class="exercise-list"></section>
+  </main>
+
+  <template id="exerciseTemplate">
+    <article class="exercise-card">
+      <div class="exercise-head-row">
+        <div class="exercise-head">
+          <h2 class="exercise-name"></h2>
+          <div class="exercise-meta"></div>
+          <div class="exercise-static-note"></div>
+        </div>
+        <button type="button" class="copy-last-btn" title="Copia ultimo workout">Copia ultimo</button>
+      </div>
+      <div class="grid-wrap">
+        <table class="load-grid">
+          <thead>
+            <tr>
+              <th>Serie</th>
+              <th>Oggi</th>
+              <th class="prev-date-1">—</th>
+              <th class="prev-date-2">—</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <textarea class="notes" rows="2" placeholder="Note…"></textarea>
+    </article>
+  </template>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
