@@ -14,6 +14,7 @@
     cloudTimer: null,
     cloudBusy: false,
     pendingCloudJson: null,
+    idEditContext: null,
   };
 
   const els = {
@@ -26,6 +27,11 @@
     importBtn: document.getElementById('importBtn'),
     importFile: document.getElementById('importFile'),
     syncStatus: document.getElementById('syncStatus'),
+    idModal: document.getElementById('idModal'),
+    idModalInput: document.getElementById('idModalInput'),
+    idModalSave: document.getElementById('idModalSave'),
+    idModalCancel: document.getElementById('idModalCancel'),
+    idModalClose: document.getElementById('idModalClose'),
   };
 
   init();
@@ -57,6 +63,20 @@
     els.exportBtn.addEventListener('click', exportBackup);
     els.importBtn.addEventListener('click', () => els.importFile.click());
     els.importFile.addEventListener('change', importBackup);
+
+    els.idModalCancel.addEventListener('click', closeIdModal);
+    els.idModalClose.addEventListener('click', closeIdModal);
+    els.idModal.addEventListener('click', (event) => {
+      if (event.target === els.idModal) closeIdModal();
+    });
+    els.idModalSave.addEventListener('click', saveEditedId);
+    els.idModalInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        saveEditedId();
+      }
+      if (event.key === 'Escape') closeIdModal();
+    });
   }
 
   async function initializeCloudStore() {
@@ -146,36 +166,9 @@
         setExerciseOverride(slotKey, { machine: machineInput.value });
       });
 
-      const idInput = fragment.querySelector('.exercise-id-input');
-      idInput.value = effectiveId;
-      const originalIdValue = effectiveId;
-      const commitId = () => {
-        const nextId = sanitizeExerciseId(idInput.value);
-        if (!nextId) {
-          idInput.value = originalIdValue;
-          return;
-        }
-        if (nextId === originalIdValue) {
-          idInput.value = nextId;
-          return;
-        }
-        if (hasDuplicateEffectiveId(day, exercise, nextId)) {
-          alert(`ID già usato in ${day.id}: ${nextId}`);
-          idInput.value = originalIdValue;
-          return;
-        }
-        setExerciseOverride(slotKey, { id: nextId }, true);
-      };
-      idInput.addEventListener('blur', commitId);
-      idInput.addEventListener('keydown', (event) => {
-        if (event.key === 'Enter') {
-          event.preventDefault();
-          idInput.blur();
-        }
-        if (event.key === 'Escape') {
-          idInput.value = originalIdValue;
-          idInput.blur();
-        }
+      fragment.querySelector('.exercise-id-value').textContent = effectiveId;
+      fragment.querySelector('.edit-id-btn').addEventListener('click', () => {
+        openIdModal(day, exercise, slotKey, effectiveId);
       });
       fragment.querySelector('.prev-date-1').textContent = shortDate(previous[0]?.date);
       fragment.querySelector('.prev-date-2').textContent = shortDate(previous[1]?.date);
@@ -398,6 +391,48 @@
 
     saveStore();
     if (rerender) renderExercises();
+  }
+
+  function openIdModal(day, exercise, slotKey, effectiveId) {
+    state.idEditContext = { day, exercise, slotKey, effectiveId };
+    els.idModalInput.value = effectiveId;
+    els.idModal.hidden = false;
+    document.body.classList.add('modal-open');
+    setTimeout(() => {
+      els.idModalInput.focus();
+      els.idModalInput.select();
+    }, 0);
+  }
+
+  function closeIdModal() {
+    state.idEditContext = null;
+    els.idModal.hidden = true;
+    document.body.classList.remove('modal-open');
+  }
+
+  function saveEditedId() {
+    const ctx = state.idEditContext;
+    if (!ctx) return;
+
+    const nextId = sanitizeExerciseId(els.idModalInput.value);
+    if (!nextId) {
+      alert('L’ID non può essere vuoto.');
+      return;
+    }
+
+    if (nextId === ctx.effectiveId) {
+      closeIdModal();
+      return;
+    }
+
+    if (hasDuplicateEffectiveId(ctx.day, ctx.exercise, nextId)) {
+      alert(`ID già usato in ${ctx.day.id}: ${nextId}`);
+      return;
+    }
+
+    setExerciseOverride(ctx.slotKey, { id: nextId }, false);
+    closeIdModal();
+    renderExercises();
   }
 
   function hasDuplicateEffectiveId(day, currentExercise, candidateId) {
