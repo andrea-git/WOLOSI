@@ -697,3 +697,45 @@ textarea {
     font-size: 10px;
   }
 }
+
+
+/* v6.8 — performance indicator */
+.exercise-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.exercise-meta-row .exercise-meta {
+  min-width: 0;
+}
+
+.performance-indicator {
+  flex: 0 0 auto;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  font-size: 17px;
+  line-height: 1;
+  font-weight: 950;
+  border: 1px solid currentColor;
+  background: #fff;
+}
+
+.performance-up {
+  color: #15803d;
+  background: #f0fdf4;
+}
+
+.performance-equal {
+  color: #b45309;
+  background: #fffbeb;
+}
+
+.performance-down {
+  color: #b91c1c;
+  background: #fef2f2;
+}
