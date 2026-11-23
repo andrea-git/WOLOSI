@@ -23,6 +23,7 @@
       running: false,
       intervalId: null,
     },
+    totalTimerIntervalId: null,
   };
 
   const els = {
@@ -49,6 +50,9 @@
     historyModalScroller: document.getElementById('historyModalScroller'),
     historyModalClose: document.getElementById('historyModalClose'),
     historyLoadMore: document.getElementById('historyLoadMore'),
+    workoutStartBtn: document.getElementById('workoutStartBtn'),
+    workoutEndBtn: document.getElementById('workoutEndBtn'),
+    workoutTotalDisplay: document.getElementById('workoutTotalDisplay'),
   };
 
   init();
@@ -109,6 +113,9 @@
       state.historyContext.limit += 10;
       renderExtendedHistory();
     });
+
+    els.workoutStartBtn.addEventListener('click', startWorkoutTimer);
+    els.workoutEndBtn.addEventListener('click', endWorkoutTimer);
   }
 
   async function initializeCloudStore() {
@@ -176,6 +183,7 @@
     els.exerciseList.innerHTML = '';
 
     const session = getOrCreateSession(day);
+    renderWorkoutTotalTimer(session);
     const previous = getPreviousSessions(day.id, state.date, 3);
 
     for (const exercise of day.exercises) {
@@ -406,6 +414,86 @@
       card.dataset.exerciseId = effectiveId;
       els.exerciseList.appendChild(fragment);
     }
+  }
+
+  function startWorkoutTimer() {
+    if (!state.plan) return;
+    const day = state.plan.days.find((d) => d.id === state.activeDayId);
+    if (!day) return;
+
+    const session = getOrCreateSession(day);
+    const timer = session.workoutTimer || {};
+
+    if (timer.startedAt) return;
+
+    session.workoutTimer = {
+      startedAt: Date.now(),
+      endedAt: null,
+      durationMs: null,
+    };
+    session.updatedAt = Date.now();
+    upsertSession(session);
+    renderWorkoutTotalTimer(session);
+  }
+
+  function endWorkoutTimer() {
+    if (!state.plan) return;
+    const day = state.plan.days.find((d) => d.id === state.activeDayId);
+    if (!day) return;
+
+    const session = getOrCreateSession(day);
+    const timer = session.workoutTimer;
+    if (!timer?.startedAt || timer.endedAt) return;
+
+    const endedAt = Date.now();
+    session.workoutTimer = {
+      ...timer,
+      endedAt,
+      durationMs: Math.max(0, endedAt - Number(timer.startedAt)),
+    };
+    session.updatedAt = Date.now();
+    upsertSession(session);
+    renderWorkoutTotalTimer(session);
+  }
+
+  function renderWorkoutTotalTimer(session) {
+    if (state.totalTimerIntervalId) {
+      clearInterval(state.totalTimerIntervalId);
+      state.totalTimerIntervalId = null;
+    }
+
+    const update = () => {
+      const timer = session?.workoutTimer || null;
+      const startedAt = Number(timer?.startedAt || 0);
+      const endedAt = Number(timer?.endedAt || 0);
+      const running = startedAt > 0 && endedAt === 0;
+
+      let elapsedMs = 0;
+      if (startedAt > 0) {
+        elapsedMs = endedAt > 0
+          ? Number(timer.durationMs ?? Math.max(0, endedAt - startedAt))
+          : Math.max(0, Date.now() - startedAt);
+      }
+
+      els.workoutTotalDisplay.textContent = formatWorkoutTotalTime(elapsedMs);
+      els.workoutStartBtn.disabled = startedAt > 0;
+      els.workoutEndBtn.disabled = !running;
+    };
+
+    update();
+
+    const timer = session?.workoutTimer || null;
+    if (timer?.startedAt && !timer?.endedAt) {
+      state.totalTimerIntervalId = window.setInterval(update, 500);
+    }
+  }
+
+  function formatWorkoutTotalTime(ms) {
+    const totalSeconds = Math.max(0, Math.floor(Number(ms || 0) / 1000));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   }
 
   function setupStopwatch(fragment) {
