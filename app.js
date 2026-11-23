@@ -17,6 +17,12 @@
     idEditContext: null,
     historyContext: null,
     photoCheckedSlots: new Set(),
+    stopwatch: {
+      elapsedMs: 0,
+      startedAt: null,
+      running: false,
+      intervalId: null,
+    },
   };
 
   const els = {
@@ -385,6 +391,8 @@
         openHistoryModal(day, exercise, effectiveId);
       });
 
+      setupStopwatch(fragment);
+
       const notes = fragment.querySelector('.notes');
       notes.value = current.notes || '';
       notes.addEventListener('input', () => updateNotes(day, exercise, effectiveId, notes.value));
@@ -392,6 +400,99 @@
       card.dataset.exerciseId = effectiveId;
       els.exerciseList.appendChild(fragment);
     }
+  }
+
+  function setupStopwatch(fragment) {
+    const display = fragment.querySelector('.stopwatch-display');
+    const goBtn = fragment.querySelector('.stopwatch-go');
+    const pauseBtn = fragment.querySelector('.stopwatch-pause');
+    const stopBtn = fragment.querySelector('.stopwatch-stop');
+    const resetBtn = fragment.querySelector('.stopwatch-reset');
+
+    const updateLocal = () => {
+      if (!display) return;
+      display.textContent = formatStopwatch(stopwatchElapsedMs());
+      goBtn.disabled = state.stopwatch.running;
+      pauseBtn.disabled = !state.stopwatch.running;
+      stopBtn.disabled = !state.stopwatch.running && state.stopwatch.elapsedMs === 0;
+      resetBtn.disabled = state.stopwatch.running || state.stopwatch.elapsedMs === 0;
+    };
+
+    goBtn.addEventListener('click', () => {
+      if (state.stopwatch.running) return;
+      state.stopwatch.startedAt = Date.now();
+      state.stopwatch.running = true;
+      ensureStopwatchInterval();
+      updateAllStopwatchDisplays();
+    });
+
+    pauseBtn.addEventListener('click', () => {
+      if (!state.stopwatch.running) return;
+      state.stopwatch.elapsedMs = stopwatchElapsedMs();
+      state.stopwatch.startedAt = null;
+      state.stopwatch.running = false;
+      clearStopwatchIntervalIfIdle();
+      updateAllStopwatchDisplays();
+    });
+
+    stopBtn.addEventListener('click', () => {
+      state.stopwatch.elapsedMs = stopwatchElapsedMs();
+      state.stopwatch.startedAt = null;
+      state.stopwatch.running = false;
+      clearStopwatchIntervalIfIdle();
+      updateAllStopwatchDisplays();
+    });
+
+    resetBtn.addEventListener('click', () => {
+      if (state.stopwatch.running) return;
+      state.stopwatch.elapsedMs = 0;
+      state.stopwatch.startedAt = null;
+      updateAllStopwatchDisplays();
+    });
+
+    updateLocal();
+  }
+
+  function stopwatchElapsedMs() {
+    if (!state.stopwatch.running || !state.stopwatch.startedAt) {
+      return state.stopwatch.elapsedMs;
+    }
+    return state.stopwatch.elapsedMs + (Date.now() - state.stopwatch.startedAt);
+  }
+
+  function formatStopwatch(ms) {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  function ensureStopwatchInterval() {
+    if (state.stopwatch.intervalId) return;
+    state.stopwatch.intervalId = window.setInterval(updateAllStopwatchDisplays, 250);
+  }
+
+  function clearStopwatchIntervalIfIdle() {
+    if (state.stopwatch.running || !state.stopwatch.intervalId) return;
+    clearInterval(state.stopwatch.intervalId);
+    state.stopwatch.intervalId = null;
+  }
+
+  function updateAllStopwatchDisplays() {
+    const text = formatStopwatch(stopwatchElapsedMs());
+    document.querySelectorAll('.stopwatch').forEach((wrap) => {
+      const display = wrap.querySelector('.stopwatch-display');
+      const goBtn = wrap.querySelector('.stopwatch-go');
+      const pauseBtn = wrap.querySelector('.stopwatch-pause');
+      const stopBtn = wrap.querySelector('.stopwatch-stop');
+      const resetBtn = wrap.querySelector('.stopwatch-reset');
+
+      if (display) display.textContent = text;
+      if (goBtn) goBtn.disabled = state.stopwatch.running;
+      if (pauseBtn) pauseBtn.disabled = !state.stopwatch.running;
+      if (stopBtn) stopBtn.disabled = !state.stopwatch.running && state.stopwatch.elapsedMs === 0;
+      if (resetBtn) resetBtn.disabled = state.stopwatch.running || state.stopwatch.elapsedMs === 0;
+    });
   }
 
   function updateSeriesField(day, exercise, effectiveId, setIndex, field, value) {
