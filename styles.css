@@ -1039,3 +1039,67 @@ textarea {
     font-size: 10px;
   }
 }
+
+
+/* v7.4 — persisted total workout timer */
+.workout-total-timer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  margin: -2px 0 10px;
+}
+
+.workout-total-display {
+  min-width: 72px;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.workout-start-btn,
+.workout-end-btn {
+  min-height: 30px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.workout-start-btn {
+  border: 1px solid #15803d !important;
+  background: #15803d;
+  color: #fff;
+}
+
+.workout-end-btn {
+  border: 1px solid #b91c1c !important;
+  background: #b91c1c;
+  color: #fff;
+}
+
+.workout-start-btn:disabled,
+.workout-end-btn:disabled {
+  opacity: .3;
+}
+
+@media (max-width: 430px) {
+  .workout-total-timer {
+    gap: 5px;
+    margin-bottom: 8px;
+  }
+
+  .workout-total-display {
+    min-width: 68px;
+    font-size: 12px;
+  }
+
+  .workout-start-btn,
+  .workout-end-btn {
+    min-height: 28px;
+    padding: 4px 8px;
+    font-size: 9px;
+  }
+}
