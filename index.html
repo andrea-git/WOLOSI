@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
   <meta name="theme-color" content="#111827" />
   <title>Workout Logbook</title>
-  <link rel="stylesheet" href="./styles.css?v=7.3-stopwatch" />
+  <link rel="stylesheet" href="./styles.css?v=7.4-workout-total-timer" />
 </head>
 <body>
   <main class="app">
@@ -26,6 +26,12 @@
     <div class="date-row">
       <label for="dateInput">Data</label>
       <input id="dateInput" type="date" />
+    </div>
+
+    <div class="workout-total-timer" aria-label="Cronometro totale workout">
+      <button id="workoutStartBtn" type="button" class="workout-start-btn">START</button>
+      <span id="workoutTotalDisplay" class="workout-total-display">00:00:00</span>
+      <button id="workoutEndBtn" type="button" class="workout-end-btn">END</button>
     </div>
 
     <section id="exerciseList" class="exercise-list"></section>
