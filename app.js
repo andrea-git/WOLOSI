@@ -424,6 +424,8 @@
     const session = getOrCreateSession(day);
     const timer = session.workoutTimer || {};
 
+    // A session can only have one START. If it is already running or ended,
+    // repeated taps/calls are intentionally ignored.
     if (timer.startedAt) return;
 
     session.workoutTimer = {
