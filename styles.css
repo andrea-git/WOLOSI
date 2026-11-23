@@ -1166,3 +1166,16 @@ textarea {
     font-size: 14px;
   }
 }
+
+
+/* v7.6 — top display + restart after END */
+.workout-total-start-row {
+  align-items: center;
+  gap: 14px;
+}
+
+@media (max-width: 430px) {
+  .workout-total-start-row {
+    gap: 10px;
+  }
+}
