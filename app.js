@@ -53,6 +53,7 @@
     workoutStartBtn: document.getElementById('workoutStartBtn'),
     workoutEndBtn: document.getElementById('workoutEndBtn'),
     workoutTotalDisplay: document.getElementById('workoutTotalDisplay'),
+    workoutTotalDisplayTop: document.getElementById('workoutTotalDisplayTop'),
   };
 
   init();
@@ -424,9 +425,9 @@
     const session = getOrCreateSession(day);
     const timer = session.workoutTimer || {};
 
-    // A session can only have one START. If it is already running or ended,
-    // repeated taps/calls are intentionally ignored.
-    if (timer.startedAt) return;
+    // Ignore repeated START only while the timer is currently running.
+    // After END, START begins a fresh cycle for the same session.
+    if (timer.startedAt && !timer.endedAt) return;
 
     session.workoutTimer = {
       startedAt: Date.now(),
@@ -477,8 +478,10 @@
           : Math.max(0, Date.now() - startedAt);
       }
 
-      els.workoutTotalDisplay.textContent = formatWorkoutTotalTime(elapsedMs);
-      els.workoutStartBtn.disabled = startedAt > 0;
+      const formatted = formatWorkoutTotalTime(elapsedMs);
+      els.workoutTotalDisplay.textContent = formatted;
+      if (els.workoutTotalDisplayTop) els.workoutTotalDisplayTop.textContent = formatted;
+      els.workoutStartBtn.disabled = running;
       els.workoutEndBtn.disabled = !running;
     };
 
