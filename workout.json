@@ -10,7 +10,7 @@
         { "id": "pec-deck", "name": "Pec Deck / Fly Machine", "sets": 3, "reps": "12-15", "failure": "CT" },
         { "id": "standing-chest-press", "name": "Standing Chest Press", "sets": 2, "reps": "12-15", "failure": "CT" },
         { "id": "lateral-raise-g1", "name": "Lateral Raise Machine", "sets": 4, "reps": "12-20", "failure": "CT" },
-        { "id": "single-arm-cable-lateral-raise-g1", "name": "Alzate laterali al cavo unilaterali", "sets": 3, "reps": "12-20", "failure": "CT" },
+        { "id": "cable-lateral-raise-g1", "name": "Alzate laterali ai cavi", "sets": 3, "reps": "12-20", "failure": "CT" },
         { "id": "triceps-extension-g1", "name": "Triceps Extension Machine", "sets": 3, "reps": "10-15", "failure": "CT" },
         { "id": "pushdown", "name": "Pushdown", "sets": 2, "reps": "12-15", "failure": "CT" }
       ]
