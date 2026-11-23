@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
   <meta name="theme-color" content="#111827" />
   <title>Workout Logbook</title>
-  <link rel="stylesheet" href="./styles.css?v=7.2-extended-history" />
+  <link rel="stylesheet" href="./styles.css?v=7.3-stopwatch" />
 </head>
 <body>
   <main class="app">
@@ -95,6 +95,13 @@
       </div>
       <div class="table-actions-row">
         <button type="button" class="history-open-btn" title="Apri storico esteso" aria-label="Apri storico esteso">+</button>
+        <div class="stopwatch">
+          <span class="stopwatch-display">00:00</span>
+          <button type="button" class="stopwatch-go" title="Avvia">▶</button>
+          <button type="button" class="stopwatch-pause" title="Pausa">Ⅱ</button>
+          <button type="button" class="stopwatch-stop" title="Stop">■</button>
+          <button type="button" class="stopwatch-reset" title="Azzera">↺</button>
+        </div>
         <div class="set-row-controls">
           <button type="button" class="remove-set-btn">− Serie</button>
           <button type="button" class="add-set-btn">+ Serie</button>
