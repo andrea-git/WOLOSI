@@ -329,6 +329,12 @@
         const repsInput = tr.querySelector('.reps-input');
         const rirInput = tr.querySelector('.rir-input');
 
+        [loadInput, repsInput, rirInput].forEach((input) => {
+          input.addEventListener('focus', () => {
+            requestAnimationFrame(() => input.select());
+          });
+        });
+
         loadInput.addEventListener('input', () => {
           loadInput.value = sanitizeDecimal(loadInput.value);
           updateSeriesField(day, exercise, effectiveId, i, 'loads', loadInput.value);
