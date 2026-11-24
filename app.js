@@ -24,6 +24,7 @@
       intervalId: null,
     },
     totalTimerIntervalId: null,
+    startupTarget: null,
   };
 
   const els = {
@@ -70,7 +71,10 @@
       state.activeDayId = state.plan.days?.[0]?.id || 'G1';
 
       await initializeCloudStore();
+      selectStartupPosition();
+      els.dateInput.value = state.date;
       render();
+      scrollToStartupTarget();
     } catch (error) {
       els.exerciseList.innerHTML = `<div class="empty">${escapeHtml(error.message || 'Errore caricamento scheda')}</div>`;
     }
@@ -152,6 +156,97 @@
       state.store = local;
       setSyncStatus('Solo locale', 'error');
     }
+  }
+
+  function selectStartupPosition() {
+    if (!state.plan?.days?.length) return;
+
+    const dayIndexById = new Map(state.plan.days.map((day, index) => [day.id, index]));
+    const usedSessions = state.store.sessions
+      .filter((session) => dayIndexById.has(session.dayId) && hasAnyData(session))
+      .sort((a, b) => {
+        const dateCompare = String(b.date || '').localeCompare(String(a.date || ''));
+        if (dateCompare !== 0) return dateCompare;
+        return Number(b.updatedAt || 0) - Number(a.updatedAt || 0);
+      });
+
+    const latest = usedSessions[0];
+
+    if (!latest) {
+      state.activeDayId = state.plan.days[0].id;
+      state.date = localDateISO();
+      state.startupTarget = { dayId: state.activeDayId, exerciseId: null, setIndex: 0 };
+      return;
+    }
+
+    const latestDay = state.plan.days[dayIndexById.get(latest.dayId)];
+    const incomplete = firstIncompleteSet(latestDay, latest);
+
+    if (incomplete) {
+      state.activeDayId = latestDay.id;
+      state.date = latest.date;
+      state.startupTarget = { dayId: latestDay.id, ...incomplete };
+      return;
+    }
+
+    const latestDayIndex = dayIndexById.get(latest.dayId);
+    const nextDayIndex = latestDayIndex + 1;
+
+    if (nextDayIndex < state.plan.days.length) {
+      const nextDay = state.plan.days[nextDayIndex];
+      state.activeDayId = nextDay.id;
+      state.date = localDateISO();
+      state.startupTarget = { dayId: nextDay.id, exerciseId: null, setIndex: 0 };
+      return;
+    }
+
+    state.activeDayId = state.plan.days[0].id;
+    state.date = localDateISO();
+    state.startupTarget = { dayId: state.activeDayId, exerciseId: null, setIndex: 0 };
+  }
+
+  function firstIncompleteSet(day, session) {
+    if (!day || !session) return null;
+
+    for (const exercise of day.exercises) {
+      if (exercise.optional) continue;
+
+      const effectiveId = getExerciseOverride(day, exercise).id || exercise.id;
+      const log = normalizeExerciseLog(session.exercises?.[effectiveId], exercise.sets);
+
+      for (let i = 0; i < log.setCount; i += 1) {
+        const load = String(log.loads?.[i] ?? '').trim();
+        const reps = String(log.reps?.[i] ?? '').trim();
+        const rir = String(log.rir?.[i] ?? '').trim();
+
+        if (!load || !reps || rir === '') {
+          return { exerciseId: effectiveId, setIndex: i };
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function scrollToStartupTarget() {
+    const target = state.startupTarget;
+    state.startupTarget = null;
+    if (!target || target.dayId !== state.activeDayId) return;
+
+    requestAnimationFrame(() => {
+      let element = null;
+
+      if (target.exerciseId) {
+        const card = Array.from(document.querySelectorAll('.exercise-card'))
+          .find((item) => item.dataset.exerciseId === target.exerciseId);
+        element = card?.querySelector(`tbody tr[data-set-index="${target.setIndex}"]`) || card;
+      }
+
+      if (!element) element = els.exerciseList.querySelector('.exercise-card');
+      if (!element) return;
+
+      element.scrollIntoView({ behavior: 'auto', block: 'center' });
+    });
   }
 
   function render() {
@@ -312,6 +407,7 @@
       const tbody = fragment.querySelector('tbody');
       for (let i = 0; i < setCount; i += 1) {
         const tr = document.createElement('tr');
+        tr.dataset.setIndex = String(i);
         tr.innerHTML = `
           <td>${i + 1}</td>
           <td>
