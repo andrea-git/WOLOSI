@@ -830,6 +830,10 @@
     const changeBtn = fragment.querySelector('.machine-photo-change');
     const removeBtn = fragment.querySelector('.machine-photo-remove');
     const fileInput = fragment.querySelector('.machine-photo-file');
+    const inputId = `machine-photo-file-${slotKey.replace(/[^a-z0-9_-]/gi, '-')}`;
+    fileInput.id = inputId;
+    addBtn.htmlFor = inputId;
+    changeBtn.htmlFor = inputId;
 
     const version = override.imageVersion || '';
     if (version) {
@@ -860,8 +864,6 @@
       }
     }
 
-    addBtn.addEventListener('click', () => fileInput.click());
-    changeBtn.addEventListener('click', () => fileInput.click());
     removeBtn.addEventListener('click', async () => {
       if (!confirm('Rimuovere la foto di questa macchina?')) return;
 
@@ -902,8 +904,8 @@
 
       try {
         setSyncStatus('Foto…', 'working');
-        addBtn.disabled = true;
-        changeBtn.disabled = true;
+        addBtn.classList.add('is-disabled');
+        changeBtn.classList.add('is-disabled');
 
         const dataUrl = await resizeImageToJpeg(file, 1000, 0.82);
         const response = await apiFetchUrl('/api/machine-image', {
@@ -921,8 +923,8 @@
         setSyncStatus('Foto fallita', 'error');
         alert(error.message || 'Caricamento foto fallito');
       } finally {
-        addBtn.disabled = false;
-        changeBtn.disabled = false;
+        addBtn.classList.remove('is-disabled');
+        changeBtn.classList.remove('is-disabled');
       }
     });
   }
