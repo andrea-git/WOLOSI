@@ -1208,3 +1208,19 @@ textarea {
     font-size: 14px;
   }
 }
+
+
+/* v7.8 — native file-picker labels for iOS */
+.machine-photo-add,
+.machine-photo-change {
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+.machine-photo-add.is-disabled,
+.machine-photo-change.is-disabled {
+  opacity: .35;
+  pointer-events: none;
+}
