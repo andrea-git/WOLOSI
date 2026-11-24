@@ -505,7 +505,6 @@
     const display = fragment.querySelector('.stopwatch-display');
     const goBtn = fragment.querySelector('.stopwatch-go');
     const pauseBtn = fragment.querySelector('.stopwatch-pause');
-    const stopBtn = fragment.querySelector('.stopwatch-stop');
     const resetBtn = fragment.querySelector('.stopwatch-reset');
 
     const updateLocal = () => {
@@ -513,8 +512,6 @@
       display.textContent = formatStopwatch(stopwatchElapsedMs());
       goBtn.disabled = state.stopwatch.running;
       pauseBtn.disabled = !state.stopwatch.running;
-      stopBtn.disabled = !state.stopwatch.running && state.stopwatch.elapsedMs === 0;
-      resetBtn.disabled = state.stopwatch.running || state.stopwatch.elapsedMs === 0;
     };
 
     goBtn.addEventListener('click', () => {
@@ -534,18 +531,11 @@
       updateAllStopwatchDisplays();
     });
 
-    stopBtn.addEventListener('click', () => {
-      state.stopwatch.elapsedMs = stopwatchElapsedMs();
-      state.stopwatch.startedAt = null;
-      state.stopwatch.running = false;
-      clearStopwatchIntervalIfIdle();
-      updateAllStopwatchDisplays();
-    });
-
     resetBtn.addEventListener('click', () => {
-      if (state.stopwatch.running) return;
       state.stopwatch.elapsedMs = 0;
-      state.stopwatch.startedAt = null;
+      state.stopwatch.startedAt = Date.now();
+      state.stopwatch.running = true;
+      ensureStopwatchInterval();
       updateAllStopwatchDisplays();
     });
 
@@ -583,14 +573,11 @@
       const display = wrap.querySelector('.stopwatch-display');
       const goBtn = wrap.querySelector('.stopwatch-go');
       const pauseBtn = wrap.querySelector('.stopwatch-pause');
-      const stopBtn = wrap.querySelector('.stopwatch-stop');
       const resetBtn = wrap.querySelector('.stopwatch-reset');
 
       if (display) display.textContent = text;
       if (goBtn) goBtn.disabled = state.stopwatch.running;
       if (pauseBtn) pauseBtn.disabled = !state.stopwatch.running;
-      if (stopBtn) stopBtn.disabled = !state.stopwatch.running && state.stopwatch.elapsedMs === 0;
-      if (resetBtn) resetBtn.disabled = state.stopwatch.running || state.stopwatch.elapsedMs === 0;
     });
   }
 
