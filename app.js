@@ -15,6 +15,7 @@
     cloudBusy: false,
     pendingCloudJson: null,
     idEditContext: null,
+    nameEditContext: null,
     historyContext: null,
     photoCheckedSlots: new Set(),
     stopwatch: {
@@ -43,6 +44,11 @@
     idModalSave: document.getElementById('idModalSave'),
     idModalCancel: document.getElementById('idModalCancel'),
     idModalClose: document.getElementById('idModalClose'),
+    nameModal: document.getElementById('nameModal'),
+    nameModalInput: document.getElementById('nameModalInput'),
+    nameModalSave: document.getElementById('nameModalSave'),
+    nameModalCancel: document.getElementById('nameModalCancel'),
+    nameModalClose: document.getElementById('nameModalClose'),
     photoModal: document.getElementById('photoModal'),
     photoModalImage: document.getElementById('photoModalImage'),
     photoModalClose: document.getElementById('photoModalClose'),
@@ -103,6 +109,20 @@
         saveEditedId();
       }
       if (event.key === 'Escape') closeIdModal();
+    });
+
+    els.nameModalCancel.addEventListener('click', closeNameModal);
+    els.nameModalClose.addEventListener('click', closeNameModal);
+    els.nameModal.addEventListener('click', (event) => {
+      if (event.target === els.nameModal) closeNameModal();
+    });
+    els.nameModalSave.addEventListener('click', saveEditedName);
+    els.nameModalInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        saveEditedName();
+      }
+      if (event.key === 'Escape') closeNameModal();
     });
 
     els.photoModalClose.addEventListener('click', closePhotoModal);
@@ -310,12 +330,13 @@
       const slotKey = exerciseSlotKey(day, exercise);
       const override = getExerciseOverride(day, exercise);
       const effectiveId = override.id || exercise.id;
+      const displayName = String(override.name || exercise.name || '').trim() || exercise.name;
       const current = normalizeExerciseLog(session.exercises[effectiveId], exercise.sets);
       const prev1 = normalizeExerciseLog(previous[0]?.exercises?.[effectiveId], exercise.sets);
       const prev2 = normalizeExerciseLog(previous[1]?.exercises?.[effectiveId], exercise.sets);
       const setCount = current.setCount;
 
-      fragment.querySelector('.exercise-name').textContent = exercise.name;
+      fragment.querySelector('.exercise-name').textContent = displayName;
       fragment.querySelector('.exercise-meta').textContent = `${exercise.sets} × ${exercise.reps}${exercise.failure ? ` ${exercise.failure}` : ''}${exercise.optional ? ' · opzionale' : ''}`;
       fragment.querySelector('.exercise-static-note').textContent = exercise.note || '';
 
@@ -389,6 +410,9 @@
       });
 
       fragment.querySelector('.exercise-id-value').textContent = effectiveId;
+      fragment.querySelector('.edit-name-btn').addEventListener('click', () => {
+        openNameModal(day, exercise, slotKey, displayName);
+      });
       fragment.querySelector('.edit-id-btn').addEventListener('click', () => {
         openIdModal(day, exercise, slotKey, effectiveId);
       });
@@ -436,15 +460,15 @@
             <div class="today-set">
               <label>
                 <span>kg</span>
-                <input class="load-input" inputmode="decimal" aria-label="${escapeHtml(exercise.name)} serie ${i + 1} carico" value="${escapeHtml(current.loads[i] || '')}">
+                <input class="load-input" inputmode="decimal" aria-label="${escapeHtml(displayName)} serie ${i + 1} carico" value="${escapeHtml(current.loads[i] || '')}">
               </label>
               <label>
                 <span>rep</span>
-                <input class="reps-input" inputmode="numeric" aria-label="${escapeHtml(exercise.name)} serie ${i + 1} ripetizioni" value="${escapeHtml(current.reps[i] || '')}">
+                <input class="reps-input" inputmode="numeric" aria-label="${escapeHtml(displayName)} serie ${i + 1} ripetizioni" value="${escapeHtml(current.reps[i] || '')}">
               </label>
               <label>
                 <span>RIR</span>
-                <input class="rir-input" inputmode="numeric" aria-label="${escapeHtml(exercise.name)} serie ${i + 1} RIR" value="${escapeHtml(current.rir[i] || '')}">
+                <input class="rir-input" inputmode="numeric" aria-label="${escapeHtml(displayName)} serie ${i + 1} RIR" value="${escapeHtml(current.rir[i] || '')}">
               </label>
             </div>
           </td>
@@ -550,7 +574,7 @@
 
       const historyOpenBtn = fragment.querySelector('.history-open-btn');
       historyOpenBtn.addEventListener('click', () => {
-        openHistoryModal(day, exercise, effectiveId);
+        openHistoryModal(day, { ...exercise, name: displayName }, effectiveId);
       });
 
       setupStopwatch(fragment);
@@ -1159,6 +1183,39 @@
     els.historyModalScroller.appendChild(table);
 
     els.historyLoadMore.hidden = visible.length >= all.length;
+  }
+
+  function openNameModal(day, exercise, slotKey, displayName) {
+    state.nameEditContext = { day, exercise, slotKey };
+    els.nameModalInput.value = displayName || exercise.name || '';
+    els.nameModal.hidden = false;
+    document.body.classList.add('modal-open');
+    setTimeout(() => {
+      els.nameModalInput.focus();
+      els.nameModalInput.select();
+    }, 0);
+  }
+
+  function closeNameModal() {
+    state.nameEditContext = null;
+    els.nameModal.hidden = true;
+    document.body.classList.remove('modal-open');
+  }
+
+  function saveEditedName() {
+    const ctx = state.nameEditContext;
+    if (!ctx) return;
+
+    const nextName = String(els.nameModalInput.value || '').trim();
+    if (!nextName) {
+      alert('Il nome non può essere vuoto.');
+      return;
+    }
+
+    const originalName = String(ctx.exercise.name || '').trim();
+    setExerciseOverride(ctx.slotKey, { name: nextName === originalName ? '' : nextName }, false);
+    closeNameModal();
+    renderExercises();
   }
 
   function openIdModal(day, exercise, slotKey, effectiveId) {
