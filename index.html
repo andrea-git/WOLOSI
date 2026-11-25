@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
   <meta name="theme-color" content="#111827" />
   <title>Workout Logbook</title>
-  <link rel="stylesheet" href="./styles.css?v=7.9-edit-exercise-name" />
+  <link rel="stylesheet" href="./styles.css?v=8.0-inpage-camera" />
 </head>
 <body>
   <main class="app">
@@ -74,10 +74,10 @@
               <button type="button" class="machine-photo-open" title="Apri foto macchina" hidden>
                 <img class="machine-photo-thumb" alt="Foto macchina">
               </button>
-              <label class="machine-photo-add">+ Foto</label>
+              <button type="button" class="machine-photo-add">+ Foto</button>
             </div>
             <div class="machine-photo-controls">
-              <label class="machine-photo-change" hidden>Cambia foto</label>
+              <button type="button" class="machine-photo-change" hidden>Cambia foto</button>
               <button type="button" class="machine-photo-remove" hidden>Rimuovi foto</button>
             </div>
             <input class="machine-photo-file" type="file" accept="image/*" hidden>
@@ -154,6 +154,23 @@
       <div class="id-modal-actions">
         <button id="nameModalCancel" type="button" class="modal-secondary">Annulla</button>
         <button id="nameModalSave" type="button" class="modal-primary">Salva nome</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="cameraModal" class="camera-modal-backdrop" hidden>
+    <div class="camera-modal" role="dialog" aria-modal="true" aria-labelledby="cameraModalTitle">
+      <div class="camera-modal-head">
+        <h2 id="cameraModalTitle">Foto macchina</h2>
+        <button id="cameraModalClose" type="button" class="modal-close" aria-label="Chiudi fotocamera">×</button>
+      </div>
+      <div class="camera-preview-wrap">
+        <video id="cameraPreview" class="camera-preview" autoplay playsinline muted></video>
+      </div>
+      <div id="cameraStatus" class="camera-status"></div>
+      <div class="camera-actions">
+        <button id="cameraLibraryBtn" type="button" class="modal-secondary">Libreria</button>
+        <button id="cameraCaptureBtn" type="button" class="modal-primary">Scatta</button>
       </div>
     </div>
   </div>
