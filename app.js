@@ -18,6 +18,8 @@
     nameEditContext: null,
     historyContext: null,
     photoCheckedSlots: new Set(),
+    cameraContext: null,
+    cameraStream: null,
     stopwatch: {
       elapsedMs: 0,
       startedAt: null,
@@ -49,6 +51,12 @@
     nameModalSave: document.getElementById('nameModalSave'),
     nameModalCancel: document.getElementById('nameModalCancel'),
     nameModalClose: document.getElementById('nameModalClose'),
+    cameraModal: document.getElementById('cameraModal'),
+    cameraPreview: document.getElementById('cameraPreview'),
+    cameraStatus: document.getElementById('cameraStatus'),
+    cameraCaptureBtn: document.getElementById('cameraCaptureBtn'),
+    cameraLibraryBtn: document.getElementById('cameraLibraryBtn'),
+    cameraModalClose: document.getElementById('cameraModalClose'),
     photoModal: document.getElementById('photoModal'),
     photoModalImage: document.getElementById('photoModalImage'),
     photoModalClose: document.getElementById('photoModalClose'),
@@ -123,6 +131,17 @@
         saveEditedName();
       }
       if (event.key === 'Escape') closeNameModal();
+    });
+
+    els.cameraModalClose.addEventListener('click', closeCameraModal);
+    els.cameraModal.addEventListener('click', (event) => {
+      if (event.target === els.cameraModal) closeCameraModal();
+    });
+    els.cameraCaptureBtn.addEventListener('click', captureCameraPhoto);
+    els.cameraLibraryBtn.addEventListener('click', () => {
+      const fileInput = state.cameraContext?.fileInput;
+      closeCameraModal();
+      if (fileInput) fileInput.click();
     });
 
     els.photoModalClose.addEventListener('click', closePhotoModal);
@@ -905,10 +924,9 @@
     const changeBtn = fragment.querySelector('.machine-photo-change');
     const removeBtn = fragment.querySelector('.machine-photo-remove');
     const fileInput = fragment.querySelector('.machine-photo-file');
-    const inputId = `machine-photo-file-${slotKey.replace(/[^a-z0-9_-]/gi, '-')}`;
-    fileInput.id = inputId;
-    addBtn.htmlFor = inputId;
-    changeBtn.htmlFor = inputId;
+
+    addBtn.addEventListener('click', () => openCameraModal(slotKey, fileInput));
+    changeBtn.addEventListener('click', () => openCameraModal(slotKey, fileInput));
 
     const version = override.imageVersion || '';
     if (version) {
@@ -978,30 +996,119 @@
       if (!file) return;
 
       try {
-        setSyncStatus('Foto…', 'working');
-        addBtn.classList.add('is-disabled');
-        changeBtn.classList.add('is-disabled');
-
         const dataUrl = await resizeImageToJpeg(file, 1000, 0.82);
-        const response = await apiFetchUrl('/api/machine-image', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slot: slotKey, dataUrl }),
-        });
-
-        if (!response.ok) throw new Error(await responseError(response));
-        const payload = await response.json();
-        setExerciseOverride(slotKey, { imageVersion: payload.imageVersion || Date.now() }, true);
-        setSyncStatus('Cloud ✓', 'ok');
+        await uploadMachinePhotoDataUrl(slotKey, dataUrl, addBtn, changeBtn);
       } catch (error) {
         console.error(error);
         setSyncStatus('Foto fallita', 'error');
         alert(error.message || 'Caricamento foto fallito');
-      } finally {
-        addBtn.classList.remove('is-disabled');
-        changeBtn.classList.remove('is-disabled');
       }
     });
+  }
+
+  async function openCameraModal(slotKey, fileInput) {
+    state.cameraContext = { slotKey, fileInput };
+    els.cameraStatus.textContent = 'Apertura fotocamera…';
+    els.cameraCaptureBtn.disabled = true;
+    els.cameraModal.hidden = false;
+    document.body.classList.add('modal-open');
+
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        throw new Error('Fotocamera web non supportata');
+      }
+
+      stopCameraStream();
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
+      });
+
+      if (!state.cameraContext || state.cameraContext.slotKey !== slotKey) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      state.cameraStream = stream;
+      els.cameraPreview.srcObject = stream;
+      await els.cameraPreview.play();
+      els.cameraStatus.textContent = '';
+      els.cameraCaptureBtn.disabled = false;
+    } catch (error) {
+      console.error(error);
+      els.cameraStatus.textContent = 'Fotocamera non disponibile. Puoi usare Libreria.';
+      els.cameraCaptureBtn.disabled = true;
+    }
+  }
+
+  function stopCameraStream() {
+    if (state.cameraStream) {
+      state.cameraStream.getTracks().forEach((track) => track.stop());
+      state.cameraStream = null;
+    }
+    if (els.cameraPreview) els.cameraPreview.srcObject = null;
+  }
+
+  function closeCameraModal() {
+    stopCameraStream();
+    state.cameraContext = null;
+    els.cameraModal.hidden = true;
+    els.cameraStatus.textContent = '';
+    els.cameraCaptureBtn.disabled = true;
+    document.body.classList.remove('modal-open');
+  }
+
+  async function captureCameraPhoto() {
+    const context = state.cameraContext;
+    const video = els.cameraPreview;
+    if (!context || !video?.videoWidth || !video?.videoHeight) return;
+
+    try {
+      els.cameraCaptureBtn.disabled = true;
+      els.cameraStatus.textContent = 'Salvataggio…';
+
+      const canvas = document.createElement('canvas');
+      const maxSize = 1000;
+      const scale = Math.min(1, maxSize / Math.max(video.videoWidth, video.videoHeight));
+      canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+      canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+
+      const ctx = canvas.getContext('2d', { alpha: false });
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      const slotKey = context.slotKey;
+      closeCameraModal();
+      await uploadMachinePhotoDataUrl(slotKey, dataUrl);
+    } catch (error) {
+      console.error(error);
+      setSyncStatus('Foto fallita', 'error');
+      alert(error.message || 'Scatto foto fallito');
+    }
+  }
+
+  async function uploadMachinePhotoDataUrl(slotKey, dataUrl, addBtn = null, changeBtn = null) {
+    try {
+      setSyncStatus('Foto…', 'working');
+      addBtn?.classList.add('is-disabled');
+      changeBtn?.classList.add('is-disabled');
+
+      const response = await apiFetchUrl('/api/machine-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slot: slotKey, dataUrl }),
+      });
+
+      if (!response.ok) throw new Error(await responseError(response));
+      const payload = await response.json();
+      setExerciseOverride(slotKey, { imageVersion: payload.imageVersion || Date.now() }, true);
+      setSyncStatus('Cloud ✓', 'ok');
+    } finally {
+      addBtn?.classList.remove('is-disabled');
+      changeBtn?.classList.remove('is-disabled');
+    }
   }
 
   function machinePhotoUrl(slotKey, version) {
