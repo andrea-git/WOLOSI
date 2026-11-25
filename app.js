@@ -25,6 +25,7 @@
     },
     totalTimerIntervalId: null,
     startupTarget: null,
+    autoCopiedRows: new Set(),
   };
 
   const els = {
@@ -180,6 +181,28 @@
     }
 
     const latestDay = state.plan.days[dayIndexById.get(latest.dayId)];
+    const today = localDateISO();
+
+    // Any workout from a previous date is considered closed, even if some
+    // fields (for example RIR) were intentionally left blank.
+    if (String(latest.date || '') < today) {
+      const latestDayIndex = dayIndexById.get(latest.dayId);
+      const nextDayIndex = latestDayIndex + 1;
+
+      if (nextDayIndex < state.plan.days.length) {
+        const nextDay = state.plan.days[nextDayIndex];
+        state.activeDayId = nextDay.id;
+        state.date = today;
+        state.startupTarget = { dayId: nextDay.id, exerciseId: null, setIndex: 0 };
+        return;
+      }
+
+      state.activeDayId = state.plan.days[0].id;
+      state.date = today;
+      state.startupTarget = { dayId: state.activeDayId, exerciseId: null, setIndex: 0 };
+      return;
+    }
+
     const incomplete = firstIncompleteSet(latestDay, latest);
 
     if (incomplete) {
@@ -217,9 +240,8 @@
       for (let i = 0; i < log.setCount; i += 1) {
         const load = String(log.loads?.[i] ?? '').trim();
         const reps = String(log.reps?.[i] ?? '').trim();
-        const rir = String(log.rir?.[i] ?? '').trim();
 
-        if (!load || !reps || rir === '') {
+        if (!load || !reps) {
           return { exerciseId: effectiveId, setIndex: i };
         }
       }
@@ -436,6 +458,35 @@
 
         [loadInput, repsInput, rirInput].forEach((input) => {
           input.addEventListener('focus', () => {
+            if (i > 0) {
+              const liveSession = getOrCreateSession(day);
+              const liveLog = normalizeExerciseLog(liveSession.exercises[effectiveId], exercise.sets);
+              const rowKey = `${liveSession.id}:${effectiveId}:${i}`;
+              const rowIsEmpty = !String(liveLog.loads?.[i] ?? '').trim()
+                && !String(liveLog.reps?.[i] ?? '').trim()
+                && !String(liveLog.rir?.[i] ?? '').trim();
+
+              if (rowIsEmpty && !state.autoCopiedRows.has(rowKey)) {
+                const previousLoad = String(liveLog.loads?.[i - 1] ?? '').trim();
+                const previousReps = String(liveLog.reps?.[i - 1] ?? '').trim();
+                const previousRir = String(liveLog.rir?.[i - 1] ?? '').trim();
+                const previousHasData = Boolean(previousLoad || previousReps || previousRir);
+
+                if (previousHasData) {
+                  liveLog.loads[i] = previousLoad;
+                  liveLog.reps[i] = previousReps;
+                  liveLog.rir[i] = previousRir;
+                  liveSession.exercises[effectiveId] = liveLog;
+                  state.autoCopiedRows.add(rowKey);
+                  scheduleSave(liveSession);
+
+                  loadInput.value = previousLoad;
+                  repsInput.value = previousReps;
+                  rirInput.value = previousRir;
+                }
+              }
+            }
+
             requestAnimationFrame(() => input.select());
           });
         });
@@ -1396,8 +1447,11 @@
       const repCount = Number(reps[i]);
       if (!(load > 0) || !(repCount > 0)) continue;
 
-      const rirValue = Number(rir[i]);
-      const effectiveReps = repCount + (Number.isFinite(rirValue) && rirValue >= 0 ? rirValue : 0);
+      const rirRaw = String(rir[i] ?? '').trim();
+      const rirValue = rirRaw === '' ? null : Number(rirRaw);
+      const effectiveReps = repCount + (
+        rirValue !== null && Number.isFinite(rirValue) && rirValue >= 0 ? rirValue : 0
+      );
 
       tonnage += load * repCount;
       e1rms.push(load * (1 + effectiveReps / 30));
