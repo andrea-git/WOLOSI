@@ -9,6 +9,8 @@
     plan: null,
     activeDayId: 'G1',
     date: localDateISO(),
+    referenceDate: localDateISO(),
+    referenceDayId: null,
     store: loadLocalStore(),
     saveTimer: null,
     cloudTimer: null,
@@ -76,7 +78,7 @@
 
   async function init() {
     wireGlobalEvents();
-    els.dateInput.value = state.date;
+    updateDateButton();
     setSyncStatus('Cloud…', 'working');
 
     try {
@@ -87,7 +89,8 @@
 
       await initializeCloudStore();
       selectStartupPosition();
-      els.dateInput.value = state.date;
+      state.referenceDate = state.date;
+      state.referenceDayId = state.activeDayId;
       render();
       scrollToStartupTarget();
     } catch (error) {
@@ -96,10 +99,16 @@
   }
 
   function wireGlobalEvents() {
-    els.dateInput.addEventListener('change', () => {
-      state.date = els.dateInput.value || localDateISO();
-      renderExercises();
-    });
+    // Native date inputs cannot disable individual historical dates.
+    const dateButton = document.createElement('button');
+    dateButton.type = 'button';
+    dateButton.id = els.dateInput.id;
+    dateButton.style.cssText = 'padding:7px 9px;border:2px solid #94a3b8;border-radius:9px;background:#fff;color:#000;font-weight:700;font-size:inherit';
+    dateButton.setAttribute('aria-haspopup', 'dialog');
+    els.dateInput.replaceWith(dateButton);
+    els.dateInput = dateButton;
+    updateDateButton();
+    dateButton.addEventListener('click', openDatePicker);
 
     els.exportBtn.addEventListener('click', exportBackup);
     els.importBtn.addEventListener('click', () => els.importFile.click());
@@ -315,6 +324,118 @@
     renderExercises();
   }
 
+  function recordedDates(dayId) {
+    return [...new Set(state.store.sessions
+      .filter(s => s.dayId === dayId && hasAnyData(s) && s.date <= localDateISO())
+      .map(s => s.date))].sort();
+  }
+
+  function navigateToDay(dayId) {
+    if (dayId === state.activeDayId) return false;
+    const today = localDateISO();
+    const reference = state.referenceDate;
+    const latest = recordedDates(dayId).filter(date => date <= reference).pop();
+    const nextDate = dayId === state.referenceDayId && reference === today
+      ? today : latest || (reference === today ? today : null);
+    if (!nextDate) {
+      alert('Nessuna sessione ' + dayId + ' registrata entro il ' + reference.split('-').reverse().join('/'));
+      return false;
+    }
+    state.activeDayId = dayId;
+    state.date = nextDate;
+    return true;
+  }
+
+  function updateDateButton() {
+    els.dateInput.textContent = state.date.split('-').reverse().join('/') + ' ▾';
+    els.dateInput.setAttribute('aria-label', 'Seleziona data: ' + state.date.split('-').reverse().join('/'));
+  }
+
+  function openDatePicker() {
+    if (!state.plan) return;
+    const today = localDateISO();
+    const available = new Set([...recordedDates(state.activeDayId), today]);
+    const earliest = [...available].sort()[0].slice(0, 7);
+    const latestMonth = today.slice(0, 7);
+    let month = state.date.slice(0, 7);
+    const dialog = document.createElement('dialog');
+    dialog.setAttribute('aria-label', 'Seleziona data ' + state.activeDayId);
+    dialog.style.cssText = 'width:min(340px,90vw);box-sizing:border-box;border:1px solid #94a3b8;border-radius:14px;padding:16px;background:#fff;color:#111827;box-shadow:0 12px 50px #0005';
+    const button = (label, action) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.style.cssText = 'min-height:40px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#111827;font-weight:700;font-size:15px';
+      b.addEventListener('click', action);
+      return b;
+    };
+    function choose(date) {
+      if (!available.has(date)) return;
+      state.date = date;
+      state.referenceDate = date;
+      state.referenceDayId = state.activeDayId;
+      dialog.close();
+      renderExercises();
+    }
+    function shift(delta) {
+      const [y, m] = month.split('-').map(Number);
+      const d = new Date(y, m - 1 + delta, 1, 12);
+      month = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      draw();
+    }
+    function draw() {
+      dialog.replaceChildren();
+      const [y, m] = month.split('-').map(Number);
+      const header = document.createElement('div');
+      header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px';
+      const prev = button('‹', () => shift(-1));
+      const next = button('›', () => shift(1));
+      prev.setAttribute('aria-label', 'Mese precedente');
+      next.setAttribute('aria-label', 'Mese successivo');
+      prev.disabled = month <= earliest;
+      next.disabled = month >= latestMonth;
+      for (const b of [prev, next]) {
+        b.style.minWidth = '40px';
+        if (b.disabled) b.style.opacity = '.3';
+      }
+      const title = document.createElement('strong');
+      title.textContent = state.activeDayId + ' · ' + new Date(y, m - 1, 1, 12).toLocaleDateString('it-IT', { month:'long', year:'numeric' });
+      header.append(prev, title, next);
+      const grid = document.createElement('div');
+      grid.style.cssText = 'display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;text-align:center';
+      for (const day of ['Lu','Ma','Me','Gi','Ve','Sa','Do']) {
+        const label = document.createElement('small');
+        label.textContent = day;
+        grid.append(label);
+      }
+      const offset = (new Date(y, m - 1, 1, 12).getDay() + 6) % 7;
+      for (let i=0;i<offset;i++) grid.append(document.createElement('span'));
+      const count = new Date(y, m, 0, 12).getDate();
+      for (let i=1;i<=count;i++) {
+        const date = month + '-' + String(i).padStart(2, '0');
+        const b = button(String(i), () => choose(date));
+        b.setAttribute('aria-label', date.split('-').reverse().join('/'));
+        b.disabled = !available.has(date);
+        if (b.disabled) b.style.cssText += ';opacity:.3;background:#e5e7eb';
+        else if (date === state.date) b.style.cssText += ';background:#111827;color:#fff';
+        else b.style.cssText += ';background:#e0f2fe;border-color:#0284c7';
+        grid.append(b);
+      }
+      const footer = document.createElement('div');
+      footer.style.cssText = 'display:flex;justify-content:space-between;gap:8px;margin-top:14px';
+      footer.append(button('Oggi', () => choose(today)), button('Chiudi', () => dialog.close()));
+      dialog.append(header, grid, footer);
+    }
+    dialog.addEventListener('close', () => { dialog.remove(); els.dateInput.focus(); });
+    dialog.addEventListener('click', event => { if (event.target === dialog) {
+      const r = dialog.getBoundingClientRect();
+      if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) dialog.close();
+    }});
+    draw();
+    document.body.append(dialog);
+    dialog.showModal();
+  }
+
   function renderTabs() {
     els.tabs.innerHTML = '';
     for (const day of state.plan.days) {
@@ -323,7 +444,7 @@
       button.textContent = day.id;
       button.className = day.id === state.activeDayId ? 'active' : '';
       button.addEventListener('click', () => {
-        state.activeDayId = day.id;
+        if (!navigateToDay(day.id)) return;
         renderTabs();
         renderExercises();
       });
@@ -336,6 +457,7 @@
     const day = state.plan.days.find((d) => d.id === state.activeDayId);
     if (!day) return;
 
+    updateDateButton();
     els.dayName.textContent = day.name;
     els.exerciseList.innerHTML = '';
 
