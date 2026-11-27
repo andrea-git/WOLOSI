@@ -1148,6 +1148,13 @@
       }
 
       stopCameraStream();
+      // WOLOSI is silent: avoid exclusive audio focus when opening the
+      // camera preview alongside an external PiP player on iOS.
+      try {
+        if (navigator.audioSession) navigator.audioSession.type = 'ambient';
+      } catch (audioSessionError) {
+        console.debug('Audio Session ambient non disponibile', audioSessionError);
+      }
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: 'environment' } },
         audio: false,
