@@ -330,17 +330,18 @@
       .map(s => s.date))].sort();
   }
 
-  function navigateToDay(dayId) {
-    if (dayId === state.activeDayId) return false;
+  function resolveDayDate(dayId) {
     const today = localDateISO();
     const reference = state.referenceDate;
     const latest = recordedDates(dayId).filter(date => date <= reference).pop();
-    const nextDate = dayId === state.referenceDayId && reference === today
+    return dayId === state.referenceDayId && reference === today
       ? today : latest || (reference === today ? today : null);
-    if (!nextDate) {
-      alert('Nessuna sessione ' + dayId + ' registrata entro il ' + reference.split('-').reverse().join('/'));
-      return false;
-    }
+  }
+
+  function navigateToDay(dayId) {
+    if (dayId === state.activeDayId) return false;
+    const nextDate = resolveDayDate(dayId);
+    if (!nextDate) return false;
     state.activeDayId = dayId;
     state.date = nextDate;
     return true;
@@ -375,6 +376,7 @@
       state.referenceDate = date;
       state.referenceDayId = state.activeDayId;
       dialog.close();
+      renderTabs();
       renderExercises();
     }
     function shift(delta) {
@@ -443,6 +445,11 @@
       button.type = 'button';
       button.textContent = day.id;
       button.className = day.id === state.activeDayId ? 'active' : '';
+      button.disabled = day.id !== state.activeDayId && !resolveDayDate(day.id);
+      if (button.disabled) {
+        button.style.opacity = '.35';
+        button.title = 'Nessuna sessione disponibile alla data di riferimento';
+      }
       button.addEventListener('click', () => {
         if (!navigateToDay(day.id)) return;
         renderTabs();
